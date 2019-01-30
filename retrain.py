@@ -163,11 +163,13 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     split into training, testing, and validation sets within each label.
     The order of items defines the class indices.
   """
+  print("image_dir", image_dir)
   if not tf.gfile.Exists(image_dir):
     tf.logging.error("Image directory '" + image_dir + "' not found.")
     return None
   result = collections.OrderedDict()
   sub_dirs = sorted(x[0] for x in tf.gfile.Walk(image_dir))
+  print(sub_dirs)
   # The root directory comes first, so skip it.
   is_root_dir = True
   for sub_dir in sub_dirs:
@@ -183,6 +185,7 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
     tf.logging.info("Looking for images in '" + dir_name + "'")
     for extension in extensions:
       file_glob = os.path.join(image_dir, dir_name, '*.' + extension)
+      print(file_glob)
       file_list.extend(tf.gfile.Glob(file_glob))
     if not file_list:
       tf.logging.warning('No files found')

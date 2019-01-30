@@ -14,12 +14,14 @@ def crop(image_path, saved_location):
 	"""
 	image_obj = face_recognition.load_image_file(image_path)
 	face_locations = face_recognition.face_locations(image_obj)
+	i = 0
 	for face_location in face_locations:
 		top, right, bottom, left = face_location
 		# print("A face is located at pixel location Top: {}, Left: {}, Bottom: {}, Right: {}".format(top, left, bottom, right))
 		face_image = image_obj[top:bottom, left:right] 
 		pil_image = Image.fromarray(face_image)
-		pil_image.save(saved_location)
+		pil_image.save("{}_{}.jpg".format(saved_location.strip(".jpg"), i))
+		i += 1
 		# print("Saved cropped face to {}".format(saved_location))
 
 
