@@ -25,8 +25,10 @@ To retrain the basic Inception v3 model on any given new images, create a direct
 
 ```bash
 python retrain.py \
-    --image_dir [path/to/repo_with_image_dirs] > [path/to/csv] \
-    --saved_model_dir models
+    --image_dir [path/to/repo_with_image_dirs] \
+    --output_graph models/[training_set].pb \
+    --output_labels models/[training_set].txt
+
 ```
 
 ## Testing
