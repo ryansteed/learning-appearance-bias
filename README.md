@@ -24,6 +24,15 @@ python crop.py [path/to/dir]
 To retrain the basic Inception v3 model on any given new images, create a directory containing all the training images sorted into separate directories by class.
 
 ```bash
-python retrain.py --image_dir [path/to/repo_with_image_dirs]
+python retrain.py \
+    --image_dir [path/to/repo_with_image_dirs] > [path/to/csv] \
+    --saved_model_dir models
+```
+
+## Testing
+To make predictions on a set of images, use the `scripts/label_image.py` script. The `scripts/classify_dir.sh` script labels all the images in a directory and stores in a CSV file. Example:
+
+```bash
+./scripts/classify_dir.sh ../data/todorov/random/ /tmp/output_graph.pb /tmp/output_labels.txt
 ```
 
