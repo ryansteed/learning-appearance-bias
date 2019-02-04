@@ -17,7 +17,6 @@ def map(file_labels, file_emotions, num_classes, skip=1):
 		if i < skip-1:
 			continue
 		if i % (num_classes+skip) == 0:
-			# writer.write_row(row_to_write)
 			if i==skip+num_classes:
 				writer.writerow(header)
 			if row_to_write is not None:
@@ -25,15 +24,15 @@ def map(file_labels, file_emotions, num_classes, skip=1):
 			row_to_write = []
 			
 			filename = row_label.split("/")[-1].strip(".jpg\n")
+			print(filename)
 			reader_emotions = csv.reader(open(file_emotions, 'r'))
 			for j, row_emotion in enumerate(reader_emotions):
 				row_emotion[-1] = row_emotion[-1].strip("\n")
-				if i==skip-1:
-					header = row_emotion
-					header[0] = header[0].strip("\ufeff")
-					row_to_write = []
-					break
 				if j == 0:
+					if i==skip-1:
+						header = row_emotion
+						header[0] = header[0].strip("\ufeff")
+						row_to_write = []
 					continue
 				if row_emotion[1] == filename:
 					row_to_write += row_emotion
@@ -42,7 +41,6 @@ def map(file_labels, file_emotions, num_classes, skip=1):
 			split = row_label.strip("\n").split(" ")
 			prob = split[-1]
 			class_name = " ".join(split[:-1])
-			# print(class_name, prob)
 			if i < skip+num_classes:
 				header.append(class_name)
 			row_to_write.append(prob)
