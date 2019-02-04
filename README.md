@@ -35,6 +35,6 @@ python retrain.py \
 To make predictions on a set of images, use the `scripts/label_image.py` script. The `scripts/classify_dir.sh` script labels all the images in a directory and stores in a CSV file. Example:
 
 ```bash
-./scripts/classify_dir.sh ../data/todorov/random/ /tmp/output_graph.pb /tmp/output_labels.txt
+./scripts/classify_dir.sh ../data/todorov/random/ models/scraped_race.pb models/scraped_race.txt > output/scraped_race.tsv
 ```
 
