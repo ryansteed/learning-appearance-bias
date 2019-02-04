@@ -4,6 +4,7 @@ trap "exit" INT
 source activate imagenet
 mogrify -format jpg $1*.bmp
 for filename in $1*.jpg; do
+	echo $filename
 	python scripts/label_image.py \
 		--graph=$2 \
 		--labels=$3 \
