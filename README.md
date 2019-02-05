@@ -29,3 +29,9 @@ To make predictions on a set of images, use the `scripts/label_image.py` script.
 ./scripts/classify_dir.sh ../data/todorov/random/ models/scraped_race.pb models/scraped_race.txt > output/scraped_race.tsv
 ```
 
+Then create a neater, mapped output using `scripts/mapping.py`.
+
+```bash
+python scripts/mapping.py [path/to/label_data] [path/to/emotions_data] [num_classes]
+```
+
