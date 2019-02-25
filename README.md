@@ -19,7 +19,6 @@ python retrain.py \
     --image_dir [path/to/repo_with_image_dirs] \
     --output_graph models/[training_set].pb \
     --output_labels models/[training_set].txt
-
 ```
 
 ## Testing
