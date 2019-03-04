@@ -7,6 +7,7 @@ import os
 import pickle
 import enlighten
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
 
 from retrain import create_image_lists
 
@@ -14,8 +15,13 @@ from retrain import create_image_lists
 def regress(*args, **kwargs):
     features = FeatureExtractor(*args, **kwargs).get_features()
     labels = LabelLoader(*args, **kwargs).get_emotion_generator()
-    print(features)
-    print(labels)
+    train = pd.merge(
+        labels,
+        features,
+        on="Face name",
+        how="left"
+    )
+    print(train)
 
 
 class FeatureExtractor:
@@ -30,7 +36,7 @@ class FeatureExtractor:
 
     def get_features(self):
         images_by_dir = create_image_lists(self.image_dir, self.testing_percentage, self.validation_percentage)
-        features_by_image = {}
+        features_by_image = []
 
         manager = enlighten.get_manager()
         ticker = manager.counter(
@@ -42,14 +48,27 @@ class FeatureExtractor:
             for image in val['training']:
                 try:
                     if self.cache:
-                        features_by_image[image] = pickle.load(open(self.make_feature_name(image), 'rb'))[1]
+                        features_by_image.append(
+                            self.make_feature_dict(image, pickle.load(open(self.make_feature_name(image), 'rb'))[1])
+                        )
                     else:
                         raise FileNotFoundError
                 except FileNotFoundError:
-                    features_by_image[image] = self.extract_features_keras(os.path.join(self.image_dir, key, image))
+                    features_by_image.append(
+                        self.make_feature_dict(
+                            image, self.extract_features_keras(os.path.join(self.image_dir, key, image))
+                        )
+                    )
                     pickle.dump((image, features_by_image[image]), open(self.make_feature_name(image), 'wb'))
                 ticker.update()
-        return features_by_image
+        return pd.DataFrame(features_by_image)
+
+    @staticmethod
+    def make_feature_dict(image, features):
+        return {
+            "Face name": os.path.splitext(image)[0],
+            "features": features
+        }
 
     def make_feature_name(self, image):
         return 'models/features/{}_{}.pkl'.format(os.path.basename(self.image_dir), os.path.splitext(image)[0])
