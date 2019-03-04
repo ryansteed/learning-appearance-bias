@@ -6,13 +6,16 @@ from keras.models import Model
 import os
 import pickle
 import enlighten
+import pandas as pd
 
 from retrain import create_image_lists
 
 
 def regress(*args, **kwargs):
     features = FeatureExtractor(*args, **kwargs).get_features()
+    labels = LabelLoader(*args, **kwargs).get_emotion_generator()
     print(features)
+    print(labels)
 
 
 class FeatureExtractor:
@@ -58,6 +61,40 @@ class FeatureExtractor:
         x = preprocess_input(x)
         predictions = self.model.predict(x)
         return np.squeeze(predictions)
+
+
+class LabelLoader:
+    labels = [
+        "Attractive",
+        "Competent",
+        "Trustworthy",
+        "Dominant",
+        "Mean",
+        "Frightening",
+        "Extroverted",
+        "Threatening",
+        "Likeable"
+    ]
+
+    def __init__(self, image_dir, *args, **kwargs):
+        self.image_dir = image_dir
+
+    def get_emotion_generator(self):
+        print(self.make_label_filename())
+        df = pd.read_csv(self.make_label_filename())
+        return df[["Face name"] + LabelLoader.labels]
+
+    def make_label_filename(self):
+        filename = os.path.join(self.image_dir, "labels.csv")
+        try:
+            open(filename)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Make sure that there is a CSV of emotion labels in the image directory {} named labels.csv".format(
+                    self.image_dir
+                )
+            )
+        return filename
 
 
 if __name__ == '__main__':
