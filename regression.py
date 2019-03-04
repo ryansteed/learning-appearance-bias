@@ -16,46 +16,48 @@ def regress(*args, **kwargs):
 
 
 class FeatureExtractor:
-    def __init__(self, image_dir, testing_percentage, validation_percentage):
+    def __init__(self, image_dir, testing_percentage, validation_percentage, cache=True):
         self.image_dir = image_dir
         self.testing_percentage = testing_percentage
         self.validation_percentage = validation_percentage
+        self.cache = cache
+
+        base_model = InceptionV3()
+        self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
 
     def get_features(self):
-        try:
-            return pickle.load(open(self.make_feature_name()))
-        except FileNotFoundError:
-            images_by_dir = create_image_lists(self.image_dir, self.testing_percentage, self.validation_percentage)
-            features_by_image = {}
+        images_by_dir = create_image_lists(self.image_dir, self.testing_percentage, self.validation_percentage)
+        features_by_image = {}
 
-            manager = enlighten.get_manager()
-            ticker = manager.counter(
-                total=sum([len(val['training']) for key, val in images_by_dir.items()]),
-                desc='Images Bottlenecked',
-                unit='images'
-            )
-            for key, val in images_by_dir.items():
-                for image in val['training']:
-                    print(self.image_dir)
-                    print(os.path.join(self.image_dir, key, image))
-                    features_by_image[image] = extract_features_keras(os.path.join(self.image_dir, key, image))
-                    ticker.update()
-            pickle.dump(features_by_image, open(self.make_feature_name(), 'wb'))
-            return features_by_image
+        manager = enlighten.get_manager()
+        ticker = manager.counter(
+            total=sum([len(val['training']) for key, val in images_by_dir.items()]),
+            desc='Images Bottlenecked',
+            unit='images'
+        )
+        for key, val in images_by_dir.items():
+            for image in val['training']:
+                try:
+                    if self.cache:
+                        features_by_image[image] = pickle.load(open(self.make_feature_name(image), 'rb'))[1]
+                    else:
+                        raise FileNotFoundError
+                except FileNotFoundError:
+                    features_by_image[image] = self.extract_features_keras(os.path.join(self.image_dir, key, image))
+                    pickle.dump((image, features_by_image[image]), open(self.make_feature_name(image), 'wb'))
+                ticker.update()
+        return features_by_image
 
-    def make_feature_name(self):
-        return 'models/features_{}'.format(self.image_dir)
+    def make_feature_name(self, image):
+        return 'models/features/{}_{}.pkl'.format(os.path.basename(self.image_dir), os.path.splitext(image)[0])
 
-
-def extract_features_keras(image_path):
-    base_model = InceptionV3()
-    model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
-    img = image.load_img(image_path, target_size=(299, 299))
-    x = image.img_to_array(img)
-    x = np.expand_dims(x, axis=0)
-    x = preprocess_input(x)
-    predictions = model.predict(x)
-    return np.squeeze(predictions)
+    def extract_features_keras(self, image_path):
+        img = image.load_img(image_path, target_size=(299, 299))
+        x = image.img_to_array(img)
+        x = np.expand_dims(x, axis=0)
+        x = preprocess_input(x)
+        predictions = self.model.predict(x)
+        return np.squeeze(predictions)
 
 
 if __name__ == '__main__':
