@@ -8,20 +8,52 @@ import pickle
 import enlighten
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split, cross_val_score
 
 from retrain import create_image_lists
 
 
-def regress(*args, **kwargs):
-    features = FeatureExtractor(*args, **kwargs).get_features()
-    labels = LabelLoader(*args, **kwargs).get_emotion_generator()
-    train = pd.merge(
+def regress(image_dir, testing_percentage, validation_percentage):
+    print("Extracting features...")
+    features = FeatureExtractor(
+        image_dir, testing_percentage, validation_percentage
+    ).get_features()
+    print("Extracting labels...")
+    labels = LabelLoader(image_dir).get_emotion_generator()
+    df = pd.merge(
         labels,
         features,
         on="Face name",
-        how="left"
+        how="inner"
     )
-    print(train)
+    # print(df[df[1] == "Face name"])
+    features = df.drop(LabelLoader.labels + ['Face name'], axis=1)
+    test = Regressor(features, df["Trustworthy"])
+    print("Cross validating...")
+    test.cross_validate()
+    print("Fitting model...")
+    test.fit()
+
+
+class Regressor:
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
+        self.reg = RandomForestRegressor(n_estimators=100)
+        self.X_train = None
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
+        self.split()
+
+    def split(self):
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=.2, random_state=42)
+
+    def fit(self):
+        self.reg.fit(self.X_train, self.y_train)
+
+    def cross_validate(self):
+        print(cross_val_score(self.reg, self.X, self.y, cv=15).mean())
 
 
 class FeatureExtractor:
@@ -34,23 +66,25 @@ class FeatureExtractor:
         base_model = InceptionV3()
         self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
 
-    def get_features(self):
+    def get_features(self, verbose=False):
         images_by_dir = create_image_lists(self.image_dir, self.testing_percentage, self.validation_percentage)
         features_by_image = []
 
         manager = enlighten.get_manager()
         ticker = manager.counter(
-            total=sum([len(val['training']) for key, val in images_by_dir.items()]),
+            total=sum([len(val['training'])+len(val['testing']) for key, val in images_by_dir.items()]),
             desc='Images Bottlenecked',
             unit='images'
         )
         for key, val in images_by_dir.items():
-            for image in val['training']:
+            for image in val['training']+val['testing']:
                 try:
                     if self.cache:
                         features_by_image.append(
                             self.make_feature_dict(image, pickle.load(open(self.make_feature_name(image), 'rb'))[1])
                         )
+                        if verbose:
+                            print("Loaded {} from file".format(image))
                     else:
                         raise FileNotFoundError
                 except FileNotFoundError:
@@ -59,16 +93,15 @@ class FeatureExtractor:
                             image, self.extract_features_keras(os.path.join(self.image_dir, key, image))
                         )
                     )
-                    pickle.dump((image, features_by_image[image]), open(self.make_feature_name(image), 'wb'))
+                    pickle.dump((image, features_by_image[-1][1:]), open(self.make_feature_name(image), 'wb'))
+                    if verbose:
+                        print("Dumped {} to file".format(image))
                 ticker.update()
-        return pd.DataFrame(features_by_image)
+        return pd.DataFrame(features_by_image).rename(columns={0: 'Face name'})
 
     @staticmethod
     def make_feature_dict(image, features):
-        return {
-            "Face name": os.path.splitext(image)[0],
-            "features": features
-        }
+        return [os.path.splitext(image)[0]] + list(features)
 
     def make_feature_name(self, image):
         return 'models/features/{}_{}.pkl'.format(os.path.basename(self.image_dir), os.path.splitext(image)[0])
@@ -95,11 +128,11 @@ class LabelLoader:
         "Likeable"
     ]
 
-    def __init__(self, image_dir, *args, **kwargs):
+    def __init__(self, image_dir):
         self.image_dir = image_dir
 
     def get_emotion_generator(self):
-        print(self.make_label_filename())
+        # print(self.make_label_filename())
         df = pd.read_csv(self.make_label_filename())
         return df[["Face name"] + LabelLoader.labels]
 
