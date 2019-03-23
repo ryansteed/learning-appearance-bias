@@ -11,26 +11,29 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split, cross_val_score
 
 
-def regress(image_dir, test_dir=None, cross_validate=True):
-    print("Extracting training features...")
-    features_train = FeatureExtractor(image_dir).get_features()
-    print(features_train.describe())
+def regress(image_dirs, test_dir=None, cross_validate=True):
+    concats = []
+    for image_dir in image_dirs:
+        print("Extracting training features for {}...".format(image_dir))
+        features_train = FeatureExtractor(image_dir).get_features()
+        print(features_train.describe())
 
-    print("Extracting labels...")
-    labels = LabelLoader(image_dir).get_labels()
-    print(labels.describe())
+        print("Extracting labels for {}...".format(image_dir))
+        labels = LabelLoader(image_dir).get_labels()
+        print(labels.describe())
 
-    print(features_train["Face name"])
-    print(labels["Face name"])
-    df = pd.merge(
-        labels,
-        features_train,
-        on="Face name",
-        how="inner"
-    )
+        df = pd.merge(
+            labels,
+            features_train,
+            on="Face name",
+            how="inner"
+        )
+        print(df.columns)
+        concats.append(df)
+
+    df = pd.concat(concats, axis=0, join='inner')
+    print(df)
     df.to_csv("output/data.csv")
-    print(df.head())
-
     test = Regressor(df, "Trustworthy")
 
     if cross_validate:
@@ -46,7 +49,7 @@ def regress(image_dir, test_dir=None, cross_validate=True):
             test_dir
         ).get_features()
         print(features_test.describe())
-        # print(test.predict(features_test))
+        print(test.predict(features_test))
 
 
 class Regressor:
@@ -123,7 +126,7 @@ class FeatureExtractor:
 
     @staticmethod
     def make_feature_dict(image, features):
-        return [image] + list(features)
+        return [os.path.splitext(image)[0]] + list(features)
 
     def make_feature_name(self, image, key):
         return 'models/features/{}__{}__{}.pkl'.format(
@@ -183,7 +186,7 @@ class LabelLoader:
             for image in filter_images(files):
                 name = os.path.splitext(image)[0].split("_")
                 labels.append({
-                    "Face name": image,
+                    "Face name": os.path.splitext(image)[0],
                     LabelLoader.label_mapping[name[-2].replace(' (300 faces)', '')]: float(name[-1])
                 })
         return pd.DataFrame.from_records(labels)
@@ -208,13 +211,6 @@ def filter_images(files):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--image_dir',
-        type=str,
-        default='',
-        required=True,
-        help='Path to folders of labeled images.'
-    )
-    parser.add_argument(
         '--test_dir',
         type=str,
         required=False,
@@ -226,6 +222,14 @@ if __name__ == '__main__':
         dest='cross_validate',
         action='store_false',
         help='Whether or not to cross validate the model.'
+    )
+    parser.add_argument(
+        '--image_dirs',
+        type=str,
+        nargs='+',
+        default='',
+        required=True,
+        help='Path to folders of labeled images.'
     )
     FLAGS, unparsed = parser.parse_known_args()
     print(FLAGS)
