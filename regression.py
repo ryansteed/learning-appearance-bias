@@ -14,19 +14,24 @@ from sklearn.model_selection import train_test_split, cross_val_score
 def regress(image_dir, test_dir=None, cross_validate=True):
     print("Extracting training features...")
     features_train = FeatureExtractor(image_dir).get_features()
+    print(features_train.describe())
 
     print("Extracting labels...")
     labels = LabelLoader(image_dir).get_labels()
     print(labels.describe())
+
+    print(features_train["Face name"])
+    print(labels["Face name"])
     df = pd.merge(
         labels,
         features_train,
         on="Face name",
         how="inner"
     )
+    df.to_csv("output/data.csv")
+    print(df.head())
 
-    df_features = df.drop(LabelLoader.base_labels + ['Face name'], axis=1)
-    test = Regressor(df_features, df["Trustworthy"])
+    test = Regressor(df, "Trustworthy")
 
     if cross_validate:
         print("Cross validating...")
@@ -45,9 +50,10 @@ def regress(image_dir, test_dir=None, cross_validate=True):
 
 
 class Regressor:
-    def __init__(self, X, y):
-        self.X = X
-        self.y = y
+    def __init__(self, df, label):
+        df = df[df[label].notna()]
+        self.X = df.drop(LabelLoader.base_labels + ['Face name'], axis=1)
+        self.y = df[label]
         self.reg = RandomForestRegressor(n_estimators=100)
         self.X_train = None
         self.X_test = None
@@ -117,7 +123,7 @@ class FeatureExtractor:
 
     @staticmethod
     def make_feature_dict(image, features):
-        return [os.path.splitext(image)[0]] + list(features)
+        return [image] + list(features)
 
     def make_feature_name(self, image, key):
         return 'models/features/{}__{}__{}.pkl'.format(
@@ -162,7 +168,6 @@ class LabelLoader:
         self.image_dir = image_dir
 
     def get_labels(self):
-        # print(self.make_label_filename())
         try:
             return self.get_labels_csv()
         except FileNotFoundError:
