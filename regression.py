@@ -11,52 +11,66 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split, cross_val_score
 
 
-def regress(image_dirs, test_dir=None, cross_validate=True):
-    concats = []
-    for image_dir in image_dirs:
-        print("Extracting training features for {}...".format(image_dir))
-        features_train = FeatureExtractor(image_dir).get_features()
-        print(features_train.describe())
-
-        print("Extracting labels for {}...".format(image_dir))
-        labels = LabelLoader(image_dir).get_labels()
-        print(labels.describe())
-
-        df = pd.merge(
-            labels,
-            features_train,
-            on="Face name",
-            how="inner"
-        )
-        print(df.columns)
-        concats.append(df)
-
-    df = pd.concat(concats, axis=0, join='inner')
-    print(df)
-    df.to_csv("output/data.csv")
-    test = Regressor(df, "Trustworthy")
+def regress(image_dirs, test_dir=None, cross_validate=False):
+    reg = get_regressor("models/regressor.pkl", image_dirs)
 
     if cross_validate:
         print("Cross validating...")
-        test.cross_validate()
-
-    print("Fitting model...")
-    test.fit(split=False)
+        reg.cross_validate()
 
     if test_dir is not None:
         print("Extracting test features...")
         features_test = FeatureExtractor(
             test_dir
         ).get_features()
-        print(features_test.describe())
-        print(test.predict(features_test))
+        print(features_test.columns)
+        print("Predicting test images...")
+        pred = reg.predict(features_test.drop(columns=["Face name"]))
+        features_test["pred"] = pred
+        print(features_test[["Face name", "pred"]])
+
+
+def get_regressor(filename, image_dirs):
+    try:
+        return pickle.load(open(filename, 'rb'))
+    except (FileNotFoundError, EOFError):
+        concats = []
+        for image_dir in image_dirs:
+            print("Extracting training features for {}...".format(image_dir))
+            features_train = FeatureExtractor(image_dir).get_features()
+            print(features_train.describe())
+
+            print("Extracting labels for {}...".format(image_dir))
+            labels = LabelLoader(image_dir).get_labels()
+
+            df = pd.merge(
+                labels,
+                features_train,
+                on="Face name",
+                how="inner"
+            )
+            print(df.columns)
+            concats.append(df)
+
+        df = pd.concat(concats, axis=0, join='inner', keys=[os.path.basename(image_dir) for image_dir in image_dirs])
+
+        print(df.describe())
+        df.to_csv("output/data.csv")
+        reg = Regressor(df, "Trustworthy")
+
+        print("Fitting model...")
+        reg.fit(split=False)
+
+        pickle.dump(reg, open(filename, 'wb'))
+
+        return reg
 
 
 class Regressor:
     def __init__(self, df, label):
         df = df[df[label].notna()]
-        self.X = df.drop(LabelLoader.base_labels + ['Face name'], axis=1)
-        self.y = df[label]
+        self.label = label
+        self.X, self.y = self.make_X_y(df)
         self.reg = RandomForestRegressor(n_estimators=100)
         self.X_train = None
         self.X_test = None
@@ -65,19 +79,32 @@ class Regressor:
         self.split()
 
     def split(self):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=.2, random_state=42)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            self.X,
+            self.y,
+            test_size=.2,
+            random_state=42
+        )
 
     def fit(self, split=True):
         if split:
             self.reg.fit(self.X_train, self.y_train)
         else:
             self.reg.fit(self.X, self.y)
+        return self.reg
 
     def cross_validate(self):
-        print(cross_val_score(self.reg, self.X, self.y, cv=15).mean())
+        print(cross_val_score(self.reg, self.X, self.y, cv=10).mean())
 
-    def predict(self, X):
+    def predict(self, test_df):
+        X = self.make_X
         return self.reg.predict(X)
+
+    def make_X(self, df):
+        return df.drop(LabelLoader.base_labels + ['Face name'], axis=1)
+
+    def make_X_y(self, df):
+        return self.make_X(df), df[self.label]
 
 
 class FeatureExtractor:
@@ -178,7 +205,10 @@ class LabelLoader:
 
     def get_labels_csv(self):
         df = pd.read_csv(self.make_label_filename())
-        return df[["Face name"] + LabelLoader.labels]
+        df = df[["Face name"] + LabelLoader.labels]
+        for label in LabelLoader.labels:
+            df[label] = (df[label] - df[label].mean()) / df[label].std(ddof=0) * 100
+        return df
 
     def get_labels_filename(self):
         labels = []
@@ -217,10 +247,9 @@ if __name__ == '__main__':
         help='Path to folders of images to test on.'
     )
     parser.add_argument(
-        '--no_validate',
+        '--cross_validate',
         '-v',
-        dest='cross_validate',
-        action='store_false',
+        action='store_true',
         help='Whether or not to cross validate the model.'
     )
     parser.add_argument(
