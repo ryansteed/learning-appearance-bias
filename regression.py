@@ -9,6 +9,7 @@ import enlighten
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split, cross_val_score
+from scipy.stats import ttest_ind
 
 
 def regress(image_dirs, test_dir=None, cross_validate=False):
@@ -25,9 +26,17 @@ def regress(image_dirs, test_dir=None, cross_validate=False):
         ).get_features()
         print(features_test.columns)
         print("Predicting test images...")
-        pred = reg.predict(features_test.drop(columns=["Face name"]))
+        pred = reg.predict(features_test)
         features_test["pred"] = pred
-        print(features_test[["Face name", "pred"]])
+        print(features_test[["Source", "pred"]])
+        print(features_test.groupby("Source").mean())
+        print(features_test.groupby("Source").std())
+        cats = np.unique(features_test["Source"])
+        print(cats)
+        print(ttest_ind(
+            features_test[features_test["Source"] == cats[0]].pred,
+            features_test[features_test["Source"] == cats[1]].pred
+        ))
 
 
 def get_regressor(filename, image_dirs):
@@ -97,11 +106,12 @@ class Regressor:
         print(cross_val_score(self.reg, self.X, self.y, cv=10).mean())
 
     def predict(self, test_df):
-        X = self.make_X
+        X = self.make_X(test_df)
         return self.reg.predict(X)
 
     def make_X(self, df):
-        return df.drop(LabelLoader.base_labels + ['Face name'], axis=1)
+        to_drop = [x for x in LabelLoader.base_labels + ['Face name', 'Source'] if x in df.columns]
+        return df.drop(columns=to_drop, axis=1)
 
     def make_X_y(self, df):
         return self.make_X(df), df[self.label]
@@ -127,33 +137,25 @@ class FeatureExtractor:
         for subdir, dirs, files in os.walk(self.image_dir):
             for image in filter_images(files):
                 try:
+                    features = pickle.load(open(self.make_feature_name(image, subdir), 'rb'))
                     if self.cache:
-                        features_by_image.append(
-                            self.make_feature_dict(
-                                image,
-                                pickle.load(open(self.make_feature_name(image, subdir), 'rb'))
-                            )
-                        )
                         if verbose:
                             print("Loaded {} from file".format(image))
                     else:
                         raise FileNotFoundError
                 except FileNotFoundError:
-                    features_by_image.append(
-                        self.make_feature_dict(
-                            image, self.extract_features_keras(os.path.join(subdir, image))
-                        )
-                    )
-                    pickle.dump(features_by_image[-1][1:], open(self.make_feature_name(image, subdir), 'wb'))
+                    features = self.extract_features_keras(os.path.join(subdir, image))
+                    pickle.dump(features, open(self.make_feature_name(image, subdir), 'wb'))
                     if verbose:
                         print("Dumped {} to file".format(image))
+                features_by_image.append(self.make_feature_dict(image, subdir, features))
                 ticker.update()
         ticker.close()
-        return pd.DataFrame(features_by_image).rename(columns={0: 'Face name'})
+        return pd.DataFrame(features_by_image).rename(columns={0: 'Face name', 1: 'Source'})
 
     @staticmethod
-    def make_feature_dict(image, features):
-        return [os.path.splitext(image)[0]] + list(features)
+    def make_feature_dict(image, subdir, features):
+        return [os.path.splitext(image)[0], os.path.basename(subdir)] + list(features)
 
     def make_feature_name(self, image, key):
         return 'models/features/{}__{}__{}.pkl'.format(
