@@ -40,20 +40,24 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
         pred = reg.predict(features_test)
         features_test["pred"] = pred
         features_test = features_test[[features_test.columns[-1]] + features_test.columns.tolist()[:-1]]
-        features_test.to_csv("output/pred.csv")
+        features_test.to_csv("output/pred_{}.csv".format(label))
 
         print(features_test.pred.describe())
         print(reg.y.describe())
 
-        print(features_test[["Source", "pred"]])
-        print(features_test.groupby("Source")["pred"].mean())
-        print(features_test.groupby("Source")["pred"].std())
-        cats = np.unique(features_test["Source"])
-        print(cats)
-        print(ttest_ind(
-            features_test[features_test["Source"] == cats[0]].pred,
-            features_test[features_test["Source"] == cats[1]].pred
-        ))
+        # print(features_test[["Source", "pred"]])
+        # print(features_test.groupby("Source")["pred"].mean())
+        # print(features_test.groupby("Source")["pred"].std())
+        # cats = np.unique(features_test["Source"])
+        # print(cats)
+        # print(ttest_ind(
+        #     features_test[features_test["Source"] == cats[0]].pred,
+        #     features_test[features_test["Source"] == cats[1]].pred
+        # ))
+
+        return features_test
+
+    return
 
 
 def get_regressor(label, image_dirs):
