@@ -12,8 +12,19 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from scipy.stats import ttest_ind
 
 
-def regress(image_dirs, test_dir=None, cross_validate=False):
-    reg = get_regressor("models/regressor.pkl", image_dirs)
+def regress(label, **kwargs):
+    if label is None:
+        return regress_all(**kwargs)
+    return regress_single(**kwargs)
+
+
+def regress_all(**kwargs):
+    for label in ["Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy"]:
+        regress_single(label, **kwargs)
+
+
+def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
+    reg = get_regressor(label, image_dirs)
 
     if cross_validate:
         print("Cross validating...")
@@ -24,14 +35,19 @@ def regress(image_dirs, test_dir=None, cross_validate=False):
         features_test = FeatureExtractor(
             test_dir
         ).get_features()
-        print(features_test.describe())
+
         print("Predicting test images...")
         pred = reg.predict(features_test)
         features_test["pred"] = pred
+        features_test = features_test[[features_test.columns[-1]] + features_test.columns.tolist()[:-1]]
         features_test.to_csv("output/pred.csv")
+
+        print(features_test.pred.describe())
+        print(reg.y.describe())
+
         print(features_test[["Source", "pred"]])
-        print(features_test.groupby("Source").mean())
-        print(features_test.groupby("Source").std())
+        print(features_test.groupby("Source")["pred"].mean())
+        print(features_test.groupby("Source")["pred"].std())
         cats = np.unique(features_test["Source"])
         print(cats)
         print(ttest_ind(
@@ -40,7 +56,9 @@ def regress(image_dirs, test_dir=None, cross_validate=False):
         ))
 
 
-def get_regressor(filename, image_dirs):
+def get_regressor(label, image_dirs):
+    print("Generating {} regressor".format(label))
+    filename = "models/regressor_{}.pkl".format(label)
     try:
         return pickle.load(open(filename, 'rb'))
     except (FileNotFoundError, EOFError):
@@ -66,7 +84,7 @@ def get_regressor(filename, image_dirs):
 
         # print(df.describe())
         df.to_csv("output/data.csv")
-        reg = Regressor(df, "Trustworthy")
+        reg = Regressor(df, label)
 
         print("Fitting model...")
         reg.fit(split=False)
@@ -244,9 +262,14 @@ def filter_images(files):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--label',
+        type=str,
+        default=None,
+        help="The emotional label to predict. If none provided, will evaluate all."
+    )
+    parser.add_argument(
         '--test_dir',
         type=str,
-        required=False,
         help='Path to folders of images to test on.'
     )
     parser.add_argument(
