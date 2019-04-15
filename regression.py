@@ -24,10 +24,11 @@ def regress(image_dirs, test_dir=None, cross_validate=False):
         features_test = FeatureExtractor(
             test_dir
         ).get_features()
-        print(features_test.columns)
+        print(features_test.describe())
         print("Predicting test images...")
         pred = reg.predict(features_test)
         features_test["pred"] = pred
+        features_test.to_csv("output/pred.csv")
         print(features_test[["Source", "pred"]])
         print(features_test.groupby("Source").mean())
         print(features_test.groupby("Source").std())
@@ -58,12 +59,12 @@ def get_regressor(filename, image_dirs):
                 on="Face name",
                 how="inner"
             )
-            print(df.columns)
+            # print(df.columns)
             concats.append(df)
 
         df = pd.concat(concats, axis=0, join='inner', keys=[os.path.basename(image_dir) for image_dir in image_dirs])
 
-        print(df.describe())
+        # print(df.describe())
         df.to_csv("output/data.csv")
         reg = Regressor(df, "Trustworthy")
 
