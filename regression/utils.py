@@ -16,7 +16,7 @@ class Ticker:
 
     def tick(self):
         if self.verbose:
-            print("{}/{}", self.i, self.total)
+            print("{}/{}".format(self.i, self.total))
         self.ticker.update()
         self.i += 1
 
