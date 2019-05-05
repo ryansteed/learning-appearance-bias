@@ -7,15 +7,14 @@ import numpy as np
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.preprocessing import image
 from keras.models import Model
+# import openface
 
 
 class FeatureExtractor:
     def __init__(self, image_dir, cache=True):
         self.image_dir = image_dir
         self.cache = cache
-
-        base_model = InceptionV3()
-        self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
+        self.model = InceptionExtractionModel()
 
     def get_features(self, verbose=False):
         features_by_image = []
@@ -36,7 +35,7 @@ class FeatureExtractor:
                     else:
                         raise FileNotFoundError
                 except FileNotFoundError:
-                    features = self.extract_features_keras(os.path.join(subdir, image))
+                    features = self.extract_features(os.path.join(subdir, image))
                     pickle.dump(features, open(self.make_feature_name(image, subdir), 'wb'))
                     if verbose:
                         print("Dumped {} to file".format(image))
@@ -56,13 +55,32 @@ class FeatureExtractor:
             os.path.splitext(image)[0]
         )
 
-    def extract_features_keras(self, image_path):
+    def extract_features(self, image_path):
+        return self.model.extract_features()
+
+
+class ExtractionModel:
+    def extract_features(self, image_path):
+        raise NotImplementedError
+
+
+class InceptionExtractionModel:
+    def __init__(self):
+        base_model = InceptionV3()
+        self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
+
+    def extract_features(self, image_path):
         img = image.load_img(image_path, target_size=(299, 299))
         x = image.img_to_array(img)
         x = np.expand_dims(x, axis=0)
         x = preprocess_input(x)
         predictions = self.model.predict(x)
         return np.squeeze(predictions)
+
+
+class OpenFaceExtractionModel:
+    def extract_features(self, image_path):
+        pass
 
 
 class LabelLoader:
