@@ -1,13 +1,12 @@
 from regression.utils import Ticker
 from regression.feature_extraction import LabelLoader
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split, KFold
+from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.base import clone
 import seaborn as sns
 import pandas as pd
 import numpy as np
 from scipy.stats import pearsonr
-import matplotlib
 import matplotlib.pyplot as plt
 import pickle
 # from scipy.stats import ttest_ind
@@ -40,10 +39,13 @@ class Regressor:
             self.reg.fit(self.X, self.y)
         return self.reg
 
-    def cross_validate(self, cache=True):
+    def cross_validate(self, cache=True, mse=False):
         reg = clone(self.reg)
         n = 10
         kf = KFold(n_splits=n, shuffle=True, random_state=42)
+        if mse:
+            scores = cross_val_score(self.reg, self.X, self.y, cv=kf)
+            print("MSE: {0:2f} (+/- {0:.2f})".format(scores.mean(), scores.std()))
         try:
             if cache:
                 preds = pickle.load(open(self.make_preds_filename(), 'rb'))
@@ -63,13 +65,13 @@ class Regressor:
         preds_df = pd.DataFrame(preds, columns=["pred", "actual", "fold"])
         self.df = self.df.merge(preds_df, how='left', left_on=self.df[self.label], right_on=preds_df.actual)
 
-        self.df["Source_formatted"] = self.df["Source"].apply(self.format_source)
-        self.df[["Source_formatted", "Face name", "actual", "pred", "fold"]].to_csv("output/preds.csv")
+        self.df["Source"] = self.df["Source"].apply(self.format_source)
+        self.df[["Source", "Face name", "actual", "pred", "fold"]].to_csv("output/preds.csv")
 
     def make_preds_filename(self):
         return "models/preds_{}.pkl".format(self.label)
 
-    def chart(self, name, annotate=False, hue="Source_formatted"):
+    def chart(self, name, annotate=False, hue="Source"):
         print(self.reg)
         err = np.absolute(self.df[self.label] - self.df.pred)
         fig, ax = plt.subplots(figsize=(10, 10))
@@ -85,12 +87,18 @@ class Regressor:
         ax.get_figure().savefig("output/{}.png".format(name), dpi=300)
         # plt.show()
 
+        print("Pearson coeff by source")
+        random_faces = self.df[self.df.Source == "300 Random Faces"]
+        print("- Random Faces\n rho={0:.4f} p={1:.4f}".format(*pearsonr(random_faces[self.label], random_faces.pred)))
+        distinct = self.df[self.df.Source == "Maximally Distinct Faces"]
+        print("- Maximally Distinct\n rho={0:.4f} p={1:.4f}".format(*pearsonr(distinct[self.label], distinct.pred)))
+
     @staticmethod
     def format_source(src):
         translation = {
-            "bmp": "Maximally Distinct Faces"
+            "bmp": "300 Random Faces"
         }
-        return translation.get(src, "300 Random Faces")
+        return translation.get(src, "Maximally Distinct Faces")
 
     def predict(self, test_df):
         X = self.make_X(test_df)
