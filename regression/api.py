@@ -23,9 +23,9 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
         print("Cross validating...")
         # reg.cross_validate()
         reg.cross_validate(mse=True)
-        reg.chart("scatter", annotate=False)
-        reg.chart("scatter_folds", annotate=False, hue="fold")
-        reg.chart("scatter_annotated", annotate=True)
+        reg.chart("{}_scatter".format(label), annotate=False)
+        reg.chart("{}_scatter_folds".format(label), annotate=False, hue="fold")
+        reg.chart("{}_scatter_annotated".format(label), annotate=True)
 
     if test_dir is not None:
         print("Extracting test features...")
@@ -71,6 +71,7 @@ def get_regressor(label, image_dirs):
 
             print("Extracting labels for {}...".format(image_dir))
             labels = LabelLoader(image_dir).get_labels()
+            print(labels.describe())
 
             df = pd.merge(
                 labels,

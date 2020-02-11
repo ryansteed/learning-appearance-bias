@@ -41,11 +41,11 @@ class Regressor:
 
     def cross_validate(self, cache=True, mse=False):
         reg = clone(self.reg)
-        n = 10
+        n = 5
         kf = KFold(n_splits=n, shuffle=True, random_state=42)
         if mse:
             scores = cross_val_score(self.reg, self.X, self.y, cv=kf)
-            print("MSE: {0:2f} (+/- {0:.2f})".format(scores.mean(), scores.std()))
+            print("MSE: {0:2f} (+/- {1:2f})".format(scores.mean(), scores.std()))
         try:
             if cache:
                 preds = pickle.load(open(self.make_preds_filename(), 'rb'))
