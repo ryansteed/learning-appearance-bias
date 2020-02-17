@@ -29,6 +29,15 @@ After environment installation, all endpoints can be accessed through the `main.
 
 The CLI performs feature extraction, training and cross-validation of a regression model for predicting appearance bias for a given face.
 
+For a quick summary of the CLI usage, just run:
+
+`python main.py`
+
+Feature extraction occurs automatically every time a new regression is trained and no features are available for the input dataset. 
+**IMPORTANT**: If your images change, be sure to clear out the cached regression models in the `models` folder by running:
+
+`rm models/*.pkl`
+
 To produce features for and cross-validate a regression model on a particular trait (e.g. Trustworthy), run:
 ```
 python main.py --image_dirs [path/to/training-images] [path/to/more-images] ... --label [Trait] -v
