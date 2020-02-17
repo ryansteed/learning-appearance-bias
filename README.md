@@ -17,7 +17,7 @@ source activate learning-appearance-bias
 
 You may also need to install Tensorflow again if prompted. Make sure to do this from the newly created env.
 
-`python3 -m pip install --upgrade https://storage.googleapis.com/tensorflow/mac/cpu/tensorflow-1.12.0-py3-none-any.whl`
+`pip install tensorflow`
 
 If your installation was interrupted by a Tensorflow installation error, resume the installation to complete building the environment.
 
