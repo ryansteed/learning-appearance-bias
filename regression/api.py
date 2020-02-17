@@ -21,8 +21,8 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
 
     if cross_validate:
         print("Cross validating...")
-        # reg.cross_validate()
-        reg.cross_validate(mse=True)
+        reg.cross_validate(label, mse=True, test_random=True)
+        # reg.cross_validate(label, mse=True)
         reg.chart("{}_scatter".format(label), annotate=False)
         reg.chart("{}_scatter_folds".format(label), annotate=False, hue="fold")
         reg.chart("{}_scatter_annotated".format(label), annotate=True)

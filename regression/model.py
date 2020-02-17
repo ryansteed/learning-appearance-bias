@@ -39,9 +39,28 @@ class Regressor:
             self.reg.fit(self.X, self.y)
         return self.reg
 
-    def cross_validate(self, cache=True, mse=False):
+    def cross_validate(self, label, cache=True, mse=False, test_random=False):
+        self.df["Source"] = self.df["Source"].apply(self.format_source)
+
         reg = clone(self.reg)
         n = 5
+
+        if test_random:
+            print("Generating predictions for a test on 300 Random Faces")
+            distinct = self.df[self.df.Source == "Maximally Distinct Faces"]
+            random = self.df[self.df.Source == "300 Random Faces"]
+            X_test, y_test = self.make_X_y(random)
+            X_train, y_train = self.make_X_y(distinct)
+            reg.fit(X_train, y_train)
+            preds_df = pd.DataFrame({
+                "pred": reg.predict(X_test),
+                "actual": y_test,
+                "Face name": random["Face name"].values
+            })
+            print("Exported predictions to CSV")
+            print("- Random Faces\n rho={0:.4f} p={1:.4f}".format(*pearsonr(preds_df.actual, preds_df.pred)))
+            preds_df.to_csv("output/preds_{}_random.csv".format(label))
+
         kf = KFold(n_splits=n, shuffle=True, random_state=42)
         if mse:
             scores = cross_val_score(self.reg, self.X, self.y, cv=kf)
@@ -62,11 +81,11 @@ class Regressor:
                 preds += zip(reg.predict(X_test), y_test, np.repeat(i, y_test.shape[0]))
                 ticker.update()
             pickle.dump(preds, open(self.make_preds_filename(), 'wb'))
+
         preds_df = pd.DataFrame(preds, columns=["pred", "actual", "fold"])
         self.df = self.df.merge(preds_df, how='left', left_on=self.df[self.label], right_on=preds_df.actual)
 
-        self.df["Source"] = self.df["Source"].apply(self.format_source)
-        self.df[["Source", "Face name", "actual", "pred", "fold"]].to_csv("output/preds.csv")
+        self.df[["Source", "Face name", "actual", "pred", "fold"]].to_csv("output/preds_{}.csv".format(label))
 
     def make_preds_filename(self):
         return "models/preds_{}.pkl".format(self.label)

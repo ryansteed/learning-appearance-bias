@@ -7,6 +7,7 @@ import numpy as np
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.preprocessing import image
 from keras.models import Model
+from keras.models import load_model
 # import openface
 
 
@@ -14,7 +15,8 @@ class FeatureExtractor:
     def __init__(self, image_dir, cache=True):
         self.image_dir = image_dir
         self.cache = cache
-        self.model = InceptionExtractionModel()
+        self.model = FaceNetExtractionModel()
+        # self.model = InceptionExtractionModel()
 
     def get_features(self, verbose=False):
         features_by_image = []
@@ -56,7 +58,7 @@ class FeatureExtractor:
         )
 
     def extract_features(self, image_path):
-        return self.model.extract_features()
+        return self.model.extract_features(image_path)
 
 
 class ExtractionModel:
@@ -64,7 +66,7 @@ class ExtractionModel:
         raise NotImplementedError
 
 
-class InceptionExtractionModel:
+class InceptionExtractionModel(ExtractionModel):
     def __init__(self):
         base_model = InceptionV3()
         self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
@@ -78,9 +80,18 @@ class InceptionExtractionModel:
         return np.squeeze(predictions)
 
 
-class OpenFaceExtractionModel:
+class FaceNetExtractionModel(ExtractionModel):
+    def __init__(self):
+        super().__init__()
+        self.model = load_model('models/facenet-keras/facenet_keras.h5', compile=False)
+
     def extract_features(self, image_path):
-        pass
+        img = image.load_img(image_path, target_size=(160, 160))
+        x = image.img_to_array(img)
+        x = np.expand_dims(x, axis=0)
+        x = preprocess_input(x)
+        predictions = self.model.predict(x)
+        return np.squeeze(predictions)
 
 
 class LabelLoader:
@@ -119,7 +130,10 @@ class LabelLoader:
         df = pd.read_csv(self.make_label_filename())
         df = df[["Face name"] + LabelLoader.labels]
         for label in LabelLoader.labels:
+            # z-score scaling (standard scaling)
             df[label] = (df[label] - df[label].mean()) / df[label].std(ddof=0) * 100
+            # min-max scaling - scale to 0,1, then scale to -300, 300
+            # df[label] = (df[label] - df[label].min()) / (df[label].max() - df[label].min()) * 600 - 300
         return df
 
     def get_labels_filename(self):
