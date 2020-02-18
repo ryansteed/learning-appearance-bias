@@ -12,23 +12,36 @@ from keras.models import load_model
 
 
 class FeatureExtractor:
+    """
+    Class for extracting and caching features from image directories.
+    """
     def __init__(self, image_dir, cache=True):
+        """
+        :param image_dir: Input image directories.
+        :param cache: Whether or not to cache extracted features.
+        """
         self.image_dir = image_dir
         self.cache = cache
+        # TODO: make model choice a CLI flag
         self.model = FaceNetExtractionModel()
         # self.model = InceptionExtractionModel()
 
     def get_features(self, verbose=False):
+        """
+        Extract and export features from images in `image_dir`.
+        :param verbose: Whether or not to print status updates
+        :return: dataframe of features with file name AS 'Face name' and source directory AS 'Source'
+        """
         features_by_image = []
-
         ticker = Ticker(
             len([file for subdir, dirs, files in os.walk(self.image_dir) for file in files]),
             'Images Bottlenecked',
             'images'
         )
-
+        # walk through images in all directories and subdirectories
         for subdir, dirs, files in os.walk(self.image_dir):
             for image in filter_images(files):
+                # try loading from cache
                 try:
                     features = pickle.load(open(self.make_feature_name(image, subdir), 'rb'))
                     if self.cache:
@@ -36,6 +49,7 @@ class FeatureExtractor:
                             print("Loaded {} from file".format(image))
                     else:
                         raise FileNotFoundError
+                # otherwise extract features
                 except FileNotFoundError:
                     features = self.extract_features(os.path.join(subdir, image))
                     pickle.dump(features, open(self.make_feature_name(image, subdir), 'wb'))
@@ -48,6 +62,13 @@ class FeatureExtractor:
 
     @staticmethod
     def make_feature_dict(image, subdir, features):
+        """
+        Util function for constructing tuples for the feature dataframe.
+        :param image: the image path
+        :param subdir: the current parent directory of the image
+        :param features: the vector of features corresponding to this image
+        :return: a tuple
+        """
         return [os.path.splitext(image)[0], os.path.basename(subdir)] + list(features)
 
     def make_feature_name(self, image, key):
@@ -58,43 +79,76 @@ class FeatureExtractor:
         )
 
     def extract_features(self, image_path):
+        """
+        Extract features using pre-set feature extraction model
+        :param image_path: the image to featurize
+        :return: the extracted features as a vector
+        """
         return self.model.extract_features(image_path)
 
 
 class ExtractionModel:
+    """
+    Class for extracting features from an image.
+    """
     def extract_features(self, image_path):
+        """
+        Extract numeric features from an image.
+        :param image_path: path to the image
+        :return: features as a vector
+        """
         raise NotImplementedError
 
 
 class InceptionExtractionModel(ExtractionModel):
+
     def __init__(self):
-        base_model = InceptionV3()
-        self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
+        """
+        Extracts features using an Inception architecture.
+        """
+        # specify these variables in inheritors
+        self.model = None
+        self.target_Size = None
 
     def extract_features(self, image_path):
+        # load the image for TF parsing
         img = image.load_img(image_path, target_size=(299, 299))
+        # convert pixels to array
         x = image.img_to_array(img)
+        # expand to 3D
         x = np.expand_dims(x, axis=0)
+        # pre-process for Inception
         x = preprocess_input(x)
+        # predict using extraction model
         predictions = self.model.predict(x)
         return np.squeeze(predictions)
 
 
-class FaceNetExtractionModel(ExtractionModel):
+class ImageNetExtractionModel(InceptionExtractionModel):
+    """
+    Extracts features using Keras InceptionV3 (pre-trained on ImageNet ILSVRC images).
+    """
+    def __init__(self):
+        super().__init__()
+        base_model = InceptionV3()
+        self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
+        self.target_Size = (299, 299)
+
+
+class FaceNetExtractionModel(InceptionExtractionModel):
+    """
+    Extracts features using FaceNet (pre-trained on MS-Celeb-1M).
+    """
     def __init__(self):
         super().__init__()
         self.model = load_model('models/facenet-keras/facenet_keras.h5', compile=False)
-
-    def extract_features(self, image_path):
-        img = image.load_img(image_path, target_size=(160, 160))
-        x = image.img_to_array(img)
-        x = np.expand_dims(x, axis=0)
-        x = preprocess_input(x)
-        predictions = self.model.predict(x)
-        return np.squeeze(predictions)
+        self.target_size = (160, 160)
 
 
 class LabelLoader:
+    """
+    Class for loading the labels for images.
+    """
     base_labels = [
         "Attractive",
         "Competent",
@@ -121,12 +175,18 @@ class LabelLoader:
         self.image_dir = image_dir
 
     def get_labels(self):
+        """
+        Get labels using CSV file if included, otherwise parse from filename.
+        """
         try:
             return self.get_labels_csv()
         except FileNotFoundError:
             return self.get_labels_filename()
 
     def get_labels_csv(self):
+        """
+        Get labels from included CSV file.
+        """
         df = pd.read_csv(self.make_label_filename())
         df = df[["Face name"] + LabelLoader.labels]
         for label in LabelLoader.labels:
@@ -137,6 +197,9 @@ class LabelLoader:
         return df
 
     def get_labels_filename(self):
+        """
+        Get labels from the image filename. (Hardcoded for Todorov maximally distinct faces.)
+        """
         labels = []
         for subdir, dirs, files in os.walk(self.image_dir):
             for image in filter_images(files):
@@ -161,4 +224,9 @@ class LabelLoader:
 
 
 def filter_images(files):
+    """
+    Util function for only considering image files with correct file format.
+    :param files: files in a directory
+    :return: the subset of `files` that are images
+    """
     return [file for file in files if file.endswith(".jpg") or file.endswith(".jpeg")]
