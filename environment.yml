@@ -20,4 +20,6 @@ dependencies:
     - grequests
     - matplotlib
     - seaborn
+    - ImageScraper
+    - Pillow
 

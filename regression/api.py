@@ -12,8 +12,20 @@ def regress(label, **kwargs):
 
 
 def regress_all(**kwargs):
-    for label in ["Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy"]:
-        regress_single(label, **kwargs)
+    labels = ["Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy"]
+    results = []
+    for label in labels:
+        results.append(regress_single(label, **kwargs))
+
+    if all(result is not None for result in results):
+        for i, result in enumerate(results):
+            pred_name = "pred_{}".format(labels[i])
+            result = result.rename(columns={"pred": pred_name})
+            if i == 0:
+                df = result
+            else:
+                df = merge_x_y(df, result[["Face name", pred_name]])
+        df.to_csv("output/test-preds_all.csv")
 
 
 def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
@@ -27,6 +39,8 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
         reg.chart("{}_scatter_folds".format(label), annotate=False, hue="fold")
         reg.chart("{}_scatter_annotated".format(label), annotate=True)
 
+        return None
+
     if test_dir is not None:
         print("Extracting test features...")
         features_test = FeatureExtractor(
@@ -34,23 +48,14 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
         ).get_features()
 
         print("Predicting test images...")
+        reg.fit()
         pred = reg.predict(features_test)
         features_test["pred"] = pred
         features_test = features_test[[features_test.columns[-1]] + features_test.columns.tolist()[:-1]]
-        features_test.to_csv("output/pred_{}.csv".format(label))
+        features_test.to_csv("output/test-preds_{}.csv".format(label))
 
         print(features_test.pred.describe())
         print(reg.y.describe())
-
-        # print(features_test[["Source", "pred"]])
-        # print(features_test.groupby("Source")["pred"].mean())
-        # print(features_test.groupby("Source")["pred"].std())
-        # cats = np.unique(features_test["Source"])
-        # print(cats)
-        # print(ttest_ind(
-        #     features_test[features_test["Source"] == cats[0]].pred,
-        #     features_test[features_test["Source"] == cats[1]].pred
-        # ))
 
         return features_test
 
@@ -73,19 +78,12 @@ def get_regressor(label, image_dirs):
             labels = LabelLoader(image_dir).get_labels()
             print(labels.describe())
 
-            df = pd.merge(
-                labels,
-                features_train,
-                on="Face name",
-                how="inner"
-            )
-            # print(df.columns)
-            concats.append(df)
+            concats.append(merge_x_y(features_train, labels))
 
         df = pd.concat(concats, axis=0, join='inner', keys=[os.path.basename(image_dir) for image_dir in image_dirs])
 
         # print(df.describe())
-        df.to_csv("output/data.csv")
+        df.to_csv("output/train-data.csv")
         reg = Regressor(df, label)
 
         # print("Fitting model...")
@@ -94,3 +92,7 @@ def get_regressor(label, image_dirs):
         pickle.dump(reg, open(filename, 'wb'))
 
         return reg
+
+
+def merge_x_y(X, y):
+    return pd.merge(y, X, on="Face name", how="inner", validate="one_to_one")

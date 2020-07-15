@@ -1,5 +1,6 @@
 from regression.utils import Ticker
 
+from PIL import Image
 import pickle
 import os
 import pandas as pd
@@ -8,6 +9,7 @@ from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.preprocessing import image
 from keras.models import Model
 from keras.models import load_model
+
 # import openface
 
 
@@ -108,11 +110,10 @@ class InceptionExtractionModel(ExtractionModel):
         """
         # specify these variables in inheritors
         self.model = None
-        self.target_Size = None
 
     def extract_features(self, image_path):
         # load the image for TF parsing
-        img = image.load_img(image_path, target_size=(299, 299))
+        img = image.load_img(image_path, target_size=self.target_size)
         # convert pixels to array
         x = image.img_to_array(img)
         # expand to 3D
@@ -132,7 +133,7 @@ class ImageNetExtractionModel(InceptionExtractionModel):
         super().__init__()
         base_model = InceptionV3()
         self.model = Model(inputs=base_model.input, outputs=base_model.get_layer('avg_pool').output)
-        self.target_Size = (299, 299)
+        self.target_size = (299, 299)
 
 
 class FaceNetExtractionModel(InceptionExtractionModel):
@@ -229,4 +230,4 @@ def filter_images(files):
     :param files: files in a directory
     :return: the subset of `files` that are images
     """
-    return [file for file in files if file.endswith(".jpg") or file.endswith(".jpeg")]
+    return [file for file in files if file.endswith(".jpg") or file.endswith(".jpeg") or file.endswith(".png")]
