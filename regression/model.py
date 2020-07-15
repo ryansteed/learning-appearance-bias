@@ -123,9 +123,10 @@ class Regressor:
         X = self.make_X(test_df)
         return self.reg.predict(X)
 
-    def make_X(self, df):
+    @staticmethod
+    def make_X(df):
         to_drop = [x for x in LabelLoader.base_labels + ['Face name', 'Source'] if x in df.columns]
         return df.drop(columns=to_drop, axis=1)
 
     def make_X_y(self, df):
-        return self.make_X(df), df[self.label]
+        return Regressor.make_X(df), df[self.label]
