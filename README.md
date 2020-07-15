@@ -45,7 +45,7 @@ python main.py --image_dirs [path/to/training-images] [path/to/more-images] ... 
 
 To produce features for and test a regression model on a particular trait (e.g. Trustworthy), run:
 ```
-python main.py --image_dirs [path/to/training-images] [path/to/more-images] ... --label [Trait] -test-dir [path/to/test-images]
+python main.py --image_dirs [path/to/training-images] [path/to/more-images] ... --label [Trait] --test_dir [path/to/test-images]
 ```
 
 ## Image Directories
