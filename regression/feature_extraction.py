@@ -175,26 +175,27 @@ class LabelLoader:
     def __init__(self, image_dir):
         self.image_dir = image_dir
 
-    def get_labels(self):
+    def get_labels(self, **kwargs):
         """
         Get labels using CSV file if included, otherwise parse from filename.
         """
         try:
-            return self.get_labels_csv()
+            return self.get_labels_csv(**kwargs)
         except FileNotFoundError:
             return self.get_labels_filename()
 
-    def get_labels_csv(self):
+    def get_labels_csv(self, normalization=True):
         """
         Get labels from included CSV file.
         """
         df = pd.read_csv(self.make_label_filename())
         df = df[["Face name"] + LabelLoader.labels]
-        for label in LabelLoader.labels:
-            # z-score scaling (standard scaling)
-            df[label] = (df[label] - df[label].mean()) / df[label].std(ddof=0) * 100
-            # min-max scaling - scale to 0,1, then scale to -300, 300
-            # df[label] = (df[label] - df[label].min()) / (df[label].max() - df[label].min()) * 600 - 300
+        if normalization:
+            for label in LabelLoader.labels:
+                # z-score scaling (standard scaling)
+                df[label] = (df[label] - df[label].mean()) / df[label].std(ddof=0) * 100
+                # min-max scaling - scale to 0,1, then scale to -300, 300
+                # df[label] = (df[label] - df[label].min()) / (df[label].max() - df[label].min()) * 600 - 300
         return df
 
     def get_labels_filename(self):
