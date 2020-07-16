@@ -3,3 +3,4 @@ models/*
 __pycache__
 output/*
 .DS_Store
+notebooks/.ipynb_checkpoints
