@@ -5,3 +5,4 @@ output/*
 .DS_Store
 notebooks/default.profraw
 notebooks/.ipynb_checkpoints
+default.profraw
