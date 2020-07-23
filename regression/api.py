@@ -11,11 +11,11 @@ def regress(label, **kwargs):
     return regress_single(label, **kwargs)
 
 
-def regress_all(**kwargs):
+def regress_all(test_dir=None, **kwargs):
     labels = ["Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy"]
     results = []
     for label in labels:
-        results.append(regress_single(label, **kwargs))
+        results.append(regress_single(label, test_dir=test_dir, **kwargs))
 
     if all(result is not None for result in results):
         for i, result in enumerate(results):
@@ -25,7 +25,7 @@ def regress_all(**kwargs):
                 df = result
             else:
                 df = merge_x_y(df, result[["Face name", pred_name]])
-        df.to_csv("output/test-preds_all.csv")
+        df.to_csv("output/preds/{}-preds_all.csv".format(os.path.basename(test_dir)))
 
 
 def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
@@ -52,7 +52,7 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
         pred = reg.predict(features_test)
         features_test["pred"] = pred
         features_test = features_test[[features_test.columns[-1]] + features_test.columns.tolist()[:-1]]
-        features_test.to_csv("output/test-preds_{}.csv".format(label))
+        features_test.to_csv("output/preds/{}-preds_{}.csv".format(os.path.basename(test_dir), label))
 
         print(features_test.pred.describe())
         print(reg.y.describe())
