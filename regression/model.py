@@ -47,6 +47,7 @@ class Regressor:
 
         if test_random:
             print("Generating predictions for a test on 300 Random Faces")
+            # print(self.df)
             distinct = self.df[self.df.Source == "Maximally Distinct Faces"]
             random = self.df[self.df.Source == "300 Random Faces"]
             X_test, y_test = self.make_X_y(random)
@@ -59,7 +60,7 @@ class Regressor:
             })
             print("Exported predictions to CSV")
             print("- Random Faces\n rho={0:.4f} p={1:.4f}".format(*pearsonr(preds_df.actual, preds_df.pred)))
-            preds_df.to_csv("output/preds_{}_random.csv".format(label))
+            preds_df.to_csv("output/preds/preds_{}_random.csv".format(label))
 
         kf = KFold(n_splits=n, shuffle=True, random_state=42)
         if mse:
@@ -85,13 +86,13 @@ class Regressor:
         preds_df = pd.DataFrame(preds, columns=["pred", "actual", "fold"])
         self.df = self.df.merge(preds_df, how='left', left_on=self.df[self.label], right_on=preds_df.actual)
 
-        self.df[["Source", "Face name", "actual", "pred", "fold"]].to_csv("output/preds_{}.csv".format(label))
+        self.df[["Source", "Face name", "actual", "pred", "fold"]].to_csv("output/preds/preds_{}.csv".format(label))
 
     def make_preds_filename(self):
         return "models/preds_{}.pkl".format(self.label)
 
     def chart(self, name, annotate=False, hue="Source"):
-        print(self.reg)
+        # print(self.reg)
         err = np.absolute(self.df[self.label] - self.df.pred)
         fig, ax = plt.subplots(figsize=(10, 10))
         ax = sns.scatterplot(ax=ax, x=self.label, y="pred", hue=hue, data=self.df)
@@ -115,7 +116,9 @@ class Regressor:
     @staticmethod
     def format_source(src):
         translation = {
-            "bmp": "300 Random Faces"
+            "bmp": "300 Random Faces",
+            "random_aligned": "300 Random Faces",
+            "random": "300 Random Faces"
         }
         return translation.get(src, "Maximally Distinct Faces")
 
