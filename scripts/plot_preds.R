@@ -1,6 +1,9 @@
 library(ggplot2)
 library(dplyr)
+library(caret)
+library(imager)
 
+base_output_path = "git/caliskan-image-bias/caliskan-retraining-inception/output"
 output_path = "git/caliskan-image-bias/caliskan-retraining-inception/output/preds"
 data_path = "git/caliskan-image-bias/data"
 traits = c("Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy", "Threat")
@@ -21,25 +24,31 @@ for (trait in traits) {
     labs(y="Predicted", x="Actual") +
     ggtitle(sprintf("Predicted %s Scores", trait)) +
     theme(legend.position=c(.85, .10))
-  ggsave(sprintf("%s/plots/scatter-source_%s.png", output_path, trait), width=w)
+  ggsave(sprintf("%s/plots/scatter-source_%s.png", base_output_path, trait), width=w)
   
   scatter_folds = ggplot(preds, aes(x=actual, y=pred, color=fold, stroke=0)) + 
     geom_point() +
     scale_colour_gradient2("Fold") +
     labs(y="Predicted", x="Actual") +
     ggtitle(sprintf("Predicted %s Scores", trait))
-  ggsave(sprintf("%s/plots/scatter-folds_%s.png", output_path, trait), width=w)
+  ggsave(sprintf("%s/plots/scatter-folds_%s.png", base_output_path, trait), width=w)
   
   histo_random = ggplot(preds_random, aes(x=actual)) +
-    geom_histogram()
+    geom_histogram() +
+    ggtitle(sprintf("Ground Truth %s Scores", trait))
   print(histo_random)
+  
+  histo_random_pred = ggplot(preds_random, aes(x=pred)) +
+    geom_histogram() +
+    ggtitle(sprintf("Predicted %s Scores", trait))
+  print(histo_random_pred)
   
   scatter_random = ggplot(preds_random, aes(x=actual, y=pred, stroke=0)) + 
     geom_point(color="#e41a1c") +
     geom_smooth(method=lm, se=FALSE, color="#e41a1c") +
     labs(y="Predicted", x="Actual") +
     ggtitle(sprintf("Predicted %s Scores for 300 Random Faces", trait))
-  ggsave(sprintf("%s/plots/scatter-random_%s.png", output_path, trait), width=w)
+  ggsave(sprintf("%s/plots/scatter-random_%s.png", base_output_path, trait), width=w)
   
   ### CORRELATIONS ###
   library("Metrics")
@@ -63,6 +72,16 @@ df
 
 
 ##### 23 Mar 2020 Experiments ####
+
+## Random Face Error Analysis ##
+for (trait in traits) {
+  preds_trustworthy = read.csv(sprintf("%s/preds_Trustworthy_random.csv", output_path, trait)) %>%
+    mutate(preds_bin = pred > 0) %>%
+    mutate(actual_bin = actual > 0)
+  cm = confusionMatrix(factor(preds_trustworthy$preds_bin), factor(preds_trustworthy$actual_bin))
+  fourfoldplot(cm$table, color=c("red", "green"), main=sprintf("Confusion Matrix - %s", trait))
+}
+
 
 ## Nationality Bias Experiment ##
 average_faces = read.csv(sprintf("%s/average-faces-preds_all.csv", output_path))
@@ -182,3 +201,41 @@ plot(joined$pred_Competent, joined$spread)
 
 lm_comp = lm(spread ~ pred_Competent, joined)
 summary(lm_comp)
+
+## error analysis
+binarize = function(x) x > 0
+preds_bin = face_by_result %>%
+  select(starts_with("pred_"), "Face.name", "Competency", "Attractiveness", "Vote.Share") %>%
+  rename(Attractiveness.Truth=Attractiveness) %>%
+  mutate(Competency_Norm = (Competency - mean(Competency, na.rm=TRUE)) / sd(Competency, na.rm=TRUE) * 100) %>%
+  mutate(error = abs(Competency_Norm - pred_Competent)) %>%
+  mutate(Pred_Competent.Bin = pred_Competent > 0) %>%
+  mutate(Competency.Bin = Competency_Norm > 0)
+### ground-truth dist
+ggplot(preds_bin, aes(x=Competency_Norm)) +
+  geom_histogram()
+ggplot(preds_bin, aes(x=pred_Competent)) +
+  geom_histogram()
+### confusion matrix
+cm = confusionMatrix(factor(preds_bin$Pred_Competent.Bin), factor(preds_bin$Competency.Bin))
+fourfoldplot(cm$table, color=c("red", "green"), main=sprintf("Confusion Matrix - Politician Competency", trait))
+cm
+### outlier errors?
+ggplot(preds_bin, aes(x=error)) +
+  geom_histogram()
+
+sorted = preds_bin %>%
+  arrange(desc(error))
+for (imgname in sorted[1:5,"Face.name"]) {
+  print(imgname)
+  if (startsWith(imgname, "G")) {
+    subdir = "Governors_all_stimuli"
+  }
+  else {
+    subdir = "Senate_all_stimuli"
+  }
+  img = load.image(sprintf("%s/politicians-database_aligned/%s/%s.png", data_path, subdir, imgname))
+  plot(img)
+}
+write.csv(sorted[,c("Face.name", "error", "Competency_Norm", "pred_Competent")], sprintf("%s/politicians-error.csv", output_path))
+

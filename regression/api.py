@@ -72,18 +72,16 @@ def get_regressor(label, image_dirs):
         for image_dir in image_dirs:
             print("Extracting training features for {}...".format(image_dir))
             features_train = FeatureExtractor(image_dir).get_features()
-            print(features_train.describe())
 
             print("Extracting labels for {}...".format(image_dir))
             labels = LabelLoader(image_dir).get_labels()
-            print(labels.describe())
 
             concats.append(merge_x_y(features_train, labels))
 
         df = pd.concat(concats, axis=0, join='inner', keys=[os.path.basename(image_dir) for image_dir in image_dirs])
 
-        # print(df.describe())
         df.to_csv("output/train-data.csv")
+        # print(df['Source'])
         reg = Regressor(df, label)
 
         # print("Fitting model...")
