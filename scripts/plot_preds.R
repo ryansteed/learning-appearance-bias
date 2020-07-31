@@ -184,23 +184,36 @@ plot(lm$residuals)
 
 ## by vote spread
 # need to get only one of the candidates (random), then calculate votes for this candidate minus votes for the other over total - use that as target
+face_by_result = face_by_result %>%
+  mutate(Competency = (Competency - mean(Competency, na.rm=TRUE)) / sd(Competency, na.rm=TRUE) * 100)
 pick_one = face_by_result[sample(nrow(face_by_result)),] %>%
   group_by(Election.ID) %>%
   filter(n() == 2) %>%
   sample_n(1)
-joined = inner_join(pick_one, face_by_result[,c("Election.ID", "Votes", "Individual.ID")], by="Election.ID")
+joined = inner_join(pick_one, face_by_result[,c("Face.name", "Election.ID", "Votes", "Individual.ID", "Competency", "pred_Competent")], by="Election.ID")
 joined = joined[which(joined$Individual.ID.x != joined$Individual.ID.y),]
 joined$Votes.x = as.numeric(gsub(",", "", sapply(strsplit(as.character(joined$Votes.x)," "), "[", 1)))
 joined$Votes.y = as.numeric(gsub(",", "", sapply(strsplit(as.character(joined$Votes.y)," "), "[", 1)))
 joined$vote_diff = joined$Votes.x - joined$Votes.y
 joined$spread = joined$vote_diff/(joined$Votes.x + joined$Votes.y)
-joined$pred_Trustworthy = scale(joined$pred_Trustworthy)
+joined$spread_competency_ground = joined$Competency.x - joined$Competency.y
+joined$spread_competency_pred = joined$pred_Competent.x - joined$pred_Competent.y
 write.csv(joined, sprintf("%s/preds-politicians_election-results.csv", output_path))
 
-plot(joined$pred_Competent, joined$spread)
+### which elections have the biggest difference in ground truth competence  bias?
+sorted = joined %>%
+  arrange(-spread_competency_ground)
+write.csv(sorted[,c("Face.name.x", "Face.name.y", "spread", "spread_competency_ground", "spread_competency_pred")], sprintf("%s/politicians-spread.csv", output_path))
 
-lm_comp = lm(spread ~ pred_Competent, joined)
-summary(lm_comp)
+### corr between predicted diff in scores and actual diff? no reason there should be
+plot(joined$spread_competency_pred, joined$spread_competency_ground)
+cor.test(~ spread_competency_pred + spread_competency_ground, joined, method="pearson")
+### cor between predicted diff in scores and vote spread
+plot(joined$spread_competency_pred, joined$spread)
+cor.test(~ spread_competency_pred + spread, joined, method="pearson")
+### cor between actual diff in scores and vote spread
+plot(joined$spread_competency_ground, joined$spread)
+cor.test(~ spread_competency_ground + spread, joined, method="pearson")
 
 ## error analysis
 binarize = function(x) x > 0
