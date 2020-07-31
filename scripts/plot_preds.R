@@ -200,10 +200,20 @@ joined$spread_competency_ground = joined$Competency.x - joined$Competency.y
 joined$spread_competency_pred = joined$pred_Competent.x - joined$pred_Competent.y
 write.csv(joined, sprintf("%s/preds-politicians_election-results.csv", output_path))
 
-### which elections have the biggest difference in ground truth competence  bias?
+### which elections have the biggest difference in ground truth competence?
 sorted = joined %>%
   arrange(-spread_competency_ground)
-write.csv(sorted[,c("Face.name.x", "Face.name.y", "spread", "spread_competency_ground", "spread_competency_pred")], sprintf("%s/politicians-spread.csv", output_path))
+write.csv(sorted[,c(
+  "Face.name.x", "Face.name.y", "spread", "spread_competency_ground", "spread_competency_pred",
+  "pred_Competent.x", "pred_Competent.y", "Competency.x", "Competency.y"
+)], sprintf("%s/politicians-spread.csv", output_path))
+### which elections have the biggest difference in predicted competence?
+sorted_pred = joined %>%
+  arrange(-spread_competency_pred)
+sorted_pred[,c(
+  "Face.name.x", "Face.name.y", "spread",
+  "pred_Competent.x", "Competency.x", "pred_Competent.y", "Competency.y"
+)]
 
 ### corr between predicted diff in scores and actual diff? no reason there should be
 plot(joined$spread_competency_pred, joined$spread_competency_ground)
