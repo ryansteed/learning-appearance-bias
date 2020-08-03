@@ -1,7 +1,10 @@
 from regression.feature_extraction import FeatureExtractor, LabelLoader
 from regression.model import Regressor
 from regression.interpretation import Interpreter
+from regression.utils import Ticker, suppress_stdout_stderr
+
 import os
+import sys
 import pickle
 import pandas as pd
 
@@ -62,13 +65,20 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
 
     return
 
-def interpret(label, training_dirs, interpret_dir, file='jpg', n=None, ground_truth=True, save=False, **kwargs):
+def interpret(
+        label, training_dirs, interpret_dir, file='jpg', n=None, 
+        ground_truth=True, save=False, verbose=False, **kwargs
+    ):
+    print("# Interpreting {} images in {} #".format(n if n is not None else "all", interpret_dir))
+    
     reg = get_regressor(label, training_dirs)
     X = reg.X
     y = reg.y
+    print("Fitting interpreter...")
     interpreter = Interpreter()
     interpreter.fit(X, y)
 
+    print("Interpreting images...")
     features_interpret = FeatureExtractor(interpret_dir).get_features()
     if ground_truth:
         # fix this later - something wrong with loading if _aligned not used
@@ -76,22 +86,46 @@ def interpret(label, training_dirs, interpret_dir, file='jpg', n=None, ground_tr
         features_interpret = merge_x_y(features_interpret, labels).dropna(subset=[label])
 
     samples = features_interpret if n is None else features_interpret.sample(n)
+    ticker = Ticker(samples.shape[0], 'Images Interpreted', "Images", verbose=True)
     for i, sample in samples.iterrows():
-        print(*sample[['Face name', 'Source']])
+        ticker.tick()
+        subd = os.path.basename(interpret_dir) if sample['Source'] != os.path.basename(interpret_dir) else None
         sample_img = interpreter.get_img(
             *sample[['Face name', 'Source']],
-            subd=os.path.basename(interpret_dir) if sample['Source'] != os.path.basename(interpret_dir) else None,
+            subd=subd,
             d=os.path.dirname(interpret_dir),
             file=file
         )
-        print(sample['Face name'])
-        interpreter.explain_img(
-            sample_img, 
-            label=label,
-            name=sample['Face name'],
-            ground_truth = sample[label] if ground_truth else None,
-            **kwargs
-        )
+        if save:
+            save_dir = "output/lime/{}{}".format(
+                os.path.basename(interpret_dir),
+                "/{}".format(subd) if subd is not None else ""
+            )
+            if not os.path.isdir(save_dir): os.makedirs(save_dir)
+            save_path = "{}/{}.png".format(
+                save_dir,
+                sample['Face name']
+            )
+        if not verbose:
+            with suppress_stdout_stderr():
+                interpreter.explain_img(
+                    sample_img, 
+                    label=label,
+                    name=sample['Face name'],
+                    ground_truth = sample[label] if ground_truth else None,
+                    save_path = save_path if save else None,
+                    **kwargs
+                )
+        else:
+            interpreter.explain_img(
+                sample_img, 
+                label=label,
+                name=sample['Face name'],
+                ground_truth = sample[label] if ground_truth else None,
+                save_path = save_path if save else None,
+                **kwargs
+            )
+    ticker.close()
 
 
 

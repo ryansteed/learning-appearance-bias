@@ -42,16 +42,17 @@ class Interpreter:
         return preds
 
     # from https://marcotcr.github.io/lime/tutorials/Tutorial%20-%20images.html
-    def explain_img(self, img, label, name="", ground_truth=None, **kwargs):
+    def explain_img(self, img, label, name="", ground_truth=None, save_path=None, verbose=False, **kwargs):
         img_processed = preprocess_input(image.img_to_array(img)).astype(float)
         sample_embedding = self.extraction_model.model.predict(np.array([img_processed]))
         pred = self.predict_fn(np.array([img_processed]))
         
-        explainer = lime_image.LimeImageExplainer()
-        print("Image {} w/ ground truth val {}".format(name, ground_truth))
-        print("Explaining label {} (p={}) for attribute {}".format(
-            self.interpret_binary(np.argmax(pred)), pred[:,np.argmax(pred)], label)
-        )
+        explainer = lime_image.LimeImageExplainer(verbose=False)
+        if verbose:
+            print("Image {} w/ ground truth val {}".format(name, ground_truth))
+            print("Explaining label {} (p={}) for attribute {}".format(
+                self.interpret_binary(np.argmax(pred)), pred[:,np.argmax(pred)], label)
+            )
         default_kwargs = {
             'hide_color': 0, 
             'num_samples': 10000,
@@ -74,7 +75,8 @@ class Interpreter:
         fig, ax = plt.subplots(1,2)
         ax[0].imshow(img_processed / 2 + 0.5)
         ax[1].imshow(mark_boundaries(temp / 2 + 0.5, mask))
-        plt.show()
+        if verbose: plt.show()
+        if save_path is not None: plt.savefig(save_path)
 
         return explanation
 
