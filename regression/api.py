@@ -105,10 +105,9 @@ def interpret(
                 save_dir,
                 sample['Face name']
             )
-            print(save_path)
             if cache and os.path.exists(save_path): 
                 save_path = None
-                print("Breaking")
+                print("Found cached - next")
                 continue
             elif not os.path.isdir(save_dir): 
                 os.makedirs(save_dir)
