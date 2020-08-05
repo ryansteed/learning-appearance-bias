@@ -67,7 +67,7 @@ def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
 
 def interpret(
         label, training_dirs, interpret_dir, file='jpg', n=None, 
-        ground_truth=True, save=False, verbose=False, **kwargs
+        ground_truth=True, save=False, verbose=False, cache=True, **kwargs
     ):
     print("# Interpreting {} images in {} #".format(n if n is not None else "all", interpret_dir))
     
@@ -85,7 +85,7 @@ def interpret(
         labels = LabelLoader(interpret_dir).get_labels(normalization=True)
         features_interpret = merge_x_y(features_interpret, labels).dropna(subset=[label])
 
-    samples = features_interpret if n is None else features_interpret.sample(n)
+    samples = features_interpret if n is None else features_interpret.sample(n).sort_values(by="Face name")
     ticker = Ticker(samples.shape[0], 'Images Interpreted', "Images", verbose=True)
     for i, sample in samples.iterrows():
         ticker.tick()
@@ -101,11 +101,17 @@ def interpret(
                 os.path.basename(interpret_dir),
                 "/{}".format(subd) if subd is not None else ""
             )
-            if not os.path.isdir(save_dir): os.makedirs(save_dir)
             save_path = "{}/{}.png".format(
                 save_dir,
                 sample['Face name']
             )
+            print(save_path)
+            if cache and os.path.exists(save_path): 
+                save_path = None
+                print("Breaking")
+                continue
+            elif not os.path.isdir(save_dir): 
+                os.makedirs(save_dir)
         if not verbose:
             with suppress_stdout_stderr():
                 interpreter.explain_img(
