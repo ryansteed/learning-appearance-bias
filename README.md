@@ -23,6 +23,10 @@ If your installation was interrupted by a Tensorflow installation error, resume 
 
 `conda env update -f environment.yml`
 
+You can also install the `regression` package locally with pip.
+
+`pip install -e .`
+
 ## API
 
 After environment installation, all endpoints can be accessed through the `main.py` CLI.
