@@ -161,7 +161,7 @@ def get_regressor(label, image_dirs):
 
         pickle.dump(reg, open(filename, 'wb'))
 
-        return
+        return reg
 
 
 def merge_x_y(X, y):
