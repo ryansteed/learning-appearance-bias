@@ -1,5 +1,5 @@
-from regression.utils import Ticker
-from regression.feature_extraction import LabelLoader
+from appearance_bias.utils import Ticker
+from appearance_bias.feature_extraction import LabelLoader, FeatureExtractor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.base import clone
@@ -45,22 +45,26 @@ class Regressor:
         reg = clone(self.reg)
         n = 5
 
-        if test_random:
+        if test_random is not None:
             print("Generating predictions for a test on 300 Random Faces")
             # print(self.df)
-            distinct = self.df[self.df.Source == "Maximally Distinct Faces"]
-            random = self.df[self.df.Source == "300 Random Faces"]
-            X_test, y_test = self.make_X_y(random)
+            distinct = self.df
+            self.test_random = Regressor.merge_x_y(
+                FeatureExtractor('data/random_aligned').get_features(),
+                LabelLoader('data/random_aligned').get_labels()
+            )
+            X_test, y_test = self.make_X_y(self.test_random)
             X_train, y_train = self.make_X_y(distinct)
             reg.fit(X_train, y_train)
             preds_df = pd.DataFrame({
                 "pred": reg.predict(X_test),
                 "actual": y_test,
-                "Face name": random["Face name"].values
+                "Face name": self.test_random["Face name"].values
             })
             print("Exported predictions to CSV")
             print("- Random Faces\n rho={0:.4f} p={1:.4f}".format(*pearsonr(preds_df.actual, preds_df.pred)))
             preds_df.to_csv("output/preds/preds_{}_random.csv".format(label))
+            self.test_random["pred"] = preds_df.pred
 
         kf = KFold(n_splits=n, shuffle=True, random_state=42)
         if mse:
@@ -108,7 +112,7 @@ class Regressor:
         # plt.show()
 
         print("Pearson coeff by source")
-        random_faces = self.df[self.df.Source == "300 Random Faces"]
+        random_faces = self.test_random
         print("- Random Faces\n rho={0:.4f} p={1:.4f}".format(*pearsonr(random_faces[self.label], random_faces.pred)))
         distinct = self.df[self.df.Source == "Maximally Distinct Faces"]
         print("- Maximally Distinct\n rho={0:.4f} p={1:.4f}".format(*pearsonr(distinct[self.label], distinct.pred)))
@@ -128,8 +132,13 @@ class Regressor:
 
     @staticmethod
     def make_X(df):
-        to_drop = [x for x in LabelLoader.base_labels + ['Face name', 'Source'] if x in df.columns]
+        # must reduce to 128 features
+        to_drop = [x for x in LabelLoader.labels + ['Face name', 'Source'] if x in df.columns]
         return df.drop(columns=to_drop, axis=1)
 
     def make_X_y(self, df):
         return Regressor.make_X(df), df[self.label]
+
+    @staticmethod
+    def merge_x_y(X, y):
+        return pd.merge(y, X, on="Face name", how="inner", validate="one_to_one")

@@ -1,9 +1,9 @@
 from distutils.core import setup
 
 setup(
-    name='regression',
-    version='0.1',
-    packages=['regression',],
+    name='appearance_bias',
+    version='1.0',
+    packages=['appearance_bias',],
     license='Creative Commons Attribution-Noncommercial-Share Alike license',
     long_description=open('README.md').read(),
     install_requires=[

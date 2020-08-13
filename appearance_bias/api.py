@@ -1,7 +1,7 @@
-from regression.feature_extraction import FeatureExtractor, LabelLoader
-from regression.model import Regressor
-from regression.interpretation import Interpreter
-from regression.utils import Ticker, suppress_stdout_stderr
+from appearance_bias.feature_extraction import FeatureExtractor, LabelLoader
+from appearance_bias.model import Regressor
+from appearance_bias.interpretation import Interpreter
+from appearance_bias.utils import Ticker, suppress_stdout_stderr
 
 import os
 import sys
@@ -28,7 +28,7 @@ def regress_all(test_dir=None, **kwargs):
             if i == 0:
                 df = result
             else:
-                df = merge_x_y(df, result[["Face name", pred_name]])
+                df = Regressor.merge_x_y(df, result[["Face name", pred_name]])
         df.to_csv("output/preds/{}-preds_all.csv".format(os.path.basename(test_dir)))
 
 
@@ -83,7 +83,7 @@ def interpret(
     if ground_truth:
         # fix this later - something wrong with loading if _aligned not used
         labels = LabelLoader(interpret_dir).get_labels(normalization=True)
-        features_interpret = merge_x_y(features_interpret, labels).dropna(subset=[label])
+        features_interpret = Regressor.merge_x_y(features_interpret, labels).dropna(subset=[label])
 
     samples = features_interpret if n is None else features_interpret.sample(n).sort_values(by="Face name")
     ticker = Ticker(samples.shape[0], 'Images Interpreted', "Images", verbose=True)
@@ -148,7 +148,7 @@ def get_regressor(label, image_dirs):
             print("Extracting labels for {}...".format(image_dir))
             labels = LabelLoader(image_dir).get_labels()
 
-            concats.append(merge_x_y(features_train, labels))
+            concats.append(Regressor.merge_x_y(features_train, labels))
 
         df = pd.concat(concats, axis=0, join='inner', keys=[os.path.basename(image_dir) for image_dir in image_dirs])
 
@@ -162,7 +162,3 @@ def get_regressor(label, image_dirs):
         pickle.dump(reg, open(filename, 'wb'))
 
         return reg
-
-
-def merge_x_y(X, y):
-    return pd.merge(y, X, on="Face name", how="inner", validate="one_to_one")

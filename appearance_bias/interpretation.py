@@ -1,4 +1,4 @@
-from regression.feature_extraction import FaceNetExtractionModel
+from appearance_bias.feature_extraction import FaceNetExtractionModel
 
 import numpy as np
 import matplotlib.pyplot as plt
