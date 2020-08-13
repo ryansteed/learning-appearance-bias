@@ -23,7 +23,7 @@ If your installation was interrupted by a Tensorflow installation error, resume 
 
 `conda env update -f environment.yml`
 
-You can also install the `regression` package locally with pip.
+You can also install the `appearance_bias` package locally with pip.
 
 `pip install -e .`
 
@@ -69,7 +69,7 @@ For the 300 Random Faces used in our paper, the `labels.csv` file is provided in
 |`data/`| Directory containing provided data for reproducing figures, though data can be stored anywhere.|
 |`models/`| contains pre-trained or cached models used/produced during training. Already includes a version of FaceNet pre-trained on MS-Celeb-1M from the [open-source FaceNet release](https://github.com/davidsandberg/facenet), converted for Keras using [keras-facenet](https://github.com/nyoki-mtl/keras-facenet).|
 |`output/`| Automatically generated directory with output plots and features.|
-|`regression/`| Python module containing source code for `main.py` CLI.|
+|`appearance_bias/`| Python module containing source code for `main.py` CLI.|
 |`scripts/`| Several useful and some deprecated scripts for image processing. `plot_preds.R` produces figures from regression output.|
 |`environment.yml`|Dependencies file for conda env.|
 |`main.py`| CLI script used to run regression training. See [API](#api) for full documentation.|

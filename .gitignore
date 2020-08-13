@@ -7,3 +7,4 @@ output/*
 notebooks/default.profraw
 notebooks/.ipynb_checkpoints
 default.profraw
+data/*/

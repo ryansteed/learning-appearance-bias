@@ -1,4 +1,4 @@
-from regression.utils import Ticker
+from appearance_bias.utils import Ticker
 
 from PIL import Image
 import pickle
@@ -38,7 +38,8 @@ class FeatureExtractor:
         ticker = Ticker(
             len([file for subdir, dirs, files in os.walk(self.image_dir) for file in files]),
             'Images Bottlenecked',
-            'images'
+            'images',
+            verbose=verbose
         )
         # walk through images in all directories and subdirectories
         for subdir, dirs, files in os.walk(self.image_dir):
@@ -156,12 +157,12 @@ class LabelLoader:
         "Trustworthy",
         "Dominant",
         "Extroverted",
-        "Likeable"
+        "Likeable",
+        "Threatening"
     ]
     labels = base_labels + [
         "Mean",
-        "Frightening",
-        "Threatening",
+        "Frightening"
     ]
     label_mapping = {
         "Attractiveness": "Attractive",
@@ -169,7 +170,8 @@ class LabelLoader:
         "Competence": "Competent",
         "Dominance": "Dominant",
         "Extroverted": "Extroverted",
-        "Likeable": "Likeable"
+        "Likeable": "Likeable",
+        "Threatening": "Threatening"
     }
 
     def __init__(self, image_dir):
@@ -189,7 +191,7 @@ class LabelLoader:
         Get labels from included CSV file.
         """
         df = pd.read_csv(self.make_label_filename())
-        df = df[["Face name"] + LabelLoader.labels]
+        df = df[["Face name"] + [label for label in LabelLoader.labels if label in df.columns]]
         if normalization:
             for label in LabelLoader.labels:
                 # z-score scaling (standard scaling)

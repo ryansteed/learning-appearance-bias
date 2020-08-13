@@ -1,4 +1,4 @@
-from regression.api import regress
+from appearance_bias.api import regress
 import argparse
 
 if __name__ == '__main__':
