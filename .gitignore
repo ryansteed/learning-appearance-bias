@@ -1,6 +1,6 @@
 *.egg-info
 .idea
-models/*
+models/features/*
 __pycache__
 output/*
 .DS_Store
