@@ -3,9 +3,9 @@ library(dplyr)
 library(caret)
 library(imager)
 
-base_output_path = "git/caliskan-image-bias/caliskan-retraining-inception/output"
-output_path = "git/caliskan-image-bias/caliskan-retraining-inception/output/preds"
-data_path = "git/caliskan-image-bias/data"
+base_output_path = "git/learning-appearance-bias/output"
+output_path = "git/learning-appearance-bias/output/preds"
+data_path = "git/learning-appearance-bias/data"
 traits = c("Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy", "Threat")
 coefs = c()
 
