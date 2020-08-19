@@ -2,6 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(caret)
 library(imager)
+library(tidyr)
 
 base_output_path = "git/learning-appearance-bias/output"
 output_path = "git/learning-appearance-bias/output/preds"
@@ -170,7 +171,10 @@ election_results = read.csv(file=sprintf("%s/politicians-database/coding.csv", d
 face_by_result = merge(politicians[c("Face.name", "pred_Competent", "pred_Trustworthy", "pred_Likeable", "pred_Attractive", "pred_Dominant", "pred_Extroverted")], election_results, by.x="Face.name", by.y="Full.Label")
 
 ## cor between predicted competence and ground truth competence?
+library(hydroGOF)
+plot(face_by_result$pred_Competent, face_by_result$Competency)
 cor.test(~ pred_Competent + Competency, face_by_result, method="pearson")
+rmse(face_by_result$Competency, face_by_result$pred_Competent, na.rm=TRUE)
 
 ## by vote share
 lm = lm(
@@ -184,8 +188,8 @@ plot(lm$residuals)
 
 ## by vote spread
 # need to get only one of the candidates (random), then calculate votes for this candidate minus votes for the other over total - use that as target
-face_by_result = face_by_result %>%
-  mutate(Competency = (Competency - mean(Competency, na.rm=TRUE)) / sd(Competency, na.rm=TRUE) * 100)
+# face_by_result = face_by_result %>%
+  # mutate(Competency = (Competency - mean(Competency, na.rm=TRUE)) / sd(Competency, na.rm=TRUE) * 100)
 pick_one = face_by_result[sample(nrow(face_by_result)),] %>%
   group_by(Election.ID) %>%
   filter(n() == 2) %>%
@@ -215,6 +219,9 @@ sorted_pred[,c(
   "pred_Competent.x", "Competency.x", "pred_Competent.y", "Competency.y"
 )]
 
+### corr between competence and vote_diff?
+plot(joined$Competency.x, joined$vote_diff)
+cor.test(~ Competency.x + vote_diff, joined)
 ### corr between predicted diff in scores and actual diff? no reason there should be
 plot(joined$spread_competency_pred, joined$spread_competency_ground)
 cor.test(~ spread_competency_pred + spread_competency_ground, joined, method="pearson")
@@ -224,6 +231,14 @@ cor.test(~ spread_competency_pred + spread, joined, method="pearson")
 ### cor between actual diff in scores and vote spread
 plot(joined$spread_competency_ground, joined$spread)
 cor.test(~ spread_competency_ground + spread, joined, method="pearson")
+## percent won - matches Ballew & Todorov 2007
+counts = joined %>%
+  mutate(success = (spread_competency_pred > 0 & Winner.Loser == "Winner") | (spread_competency_pred < 0 & Winner.Loser == "Loser"), failure = !success) %>%
+  filter(Year == 2006 & Race == "S") %>%
+  group_by(success, failure) %>%
+  count()
+counts
+chisq.test(counts$n)
 
 ## error analysis
 binarize = function(x) x > 0
