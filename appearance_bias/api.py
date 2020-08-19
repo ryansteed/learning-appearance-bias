@@ -32,16 +32,17 @@ def regress_all(test_dir=None, **kwargs):
         df.to_csv("output/preds/{}-preds_all.csv".format(os.path.basename(test_dir)))
 
 
-def regress_single(label, image_dirs, test_dir=None, cross_validate=False):
+def regress_single(label, image_dirs, test_dir=None, cross_validate=False, test_random=True):
     reg = get_regressor(label, image_dirs)
 
     if cross_validate:
         print("Cross validating...")
-        reg.cross_validate(label, mse=True, test_random=True)
+        reg.cross_validate(label, mse=True, test_random=test_random)
         # reg.cross_validate(label, mse=True)
-        reg.chart("{}_scatter".format(label), annotate=False)
-        reg.chart("{}_scatter_folds".format(label), annotate=False, hue="fold")
-        reg.chart("{}_scatter_annotated".format(label), annotate=True)
+        if test_random:
+            reg.chart("{}_scatter".format(label), annotate=False)
+            reg.chart("{}_scatter_folds".format(label), annotate=False, hue="fold")
+            reg.chart("{}_scatter_annotated".format(label), annotate=True)
 
         return None
 
