@@ -45,7 +45,7 @@ class Regressor:
         reg = clone(self.reg)
         n = 5
 
-        if test_random is not None:
+        if test_random:
             print("Generating predictions for a test on 300 Random Faces")
             # print(self.df)
             distinct = self.df
