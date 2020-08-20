@@ -1,4 +1,6 @@
-# Inception Retraining Script
+# Learning Appearance Bias
+
+Software package for the paper https://arxiv.org/abs/2002.05636.
 
 ## Installation
 `git clone https://github.com/ryansteed/learning-appearance-bias`
