@@ -3,14 +3,17 @@ library(dplyr)
 library(caret)
 library(imager)
 library(tidyr)
+library(openxlsx)
 
-base_output_path = "git/learning-appearance-bias/output"
-output_path = "git/learning-appearance-bias/output/preds"
-data_path = "git/learning-appearance-bias/data"
-traits = c("Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy", "Threat")
+base_output_path = "./output"
+output_path = "./output/preds"
+data_path = "./data"
+traits = c("Attractive", "Competent", "Dominant", "Extroverted", "Likeable", "Trustworthy", "Threatening")
 coefs = c()
 
-w = 8
+h = 4.5
+w = 4.5
+s = 1
 
 for (trait in traits) {
   ### LOAD DATA ###
@@ -19,20 +22,20 @@ for (trait in traits) {
   
   ### SCATTERS ###
   scatter_source = ggplot(preds, aes(x=actual, y=pred, color=Source, stroke=0)) + 
-    geom_point() +
+    geom_point(size=s) +
     geom_smooth(method=lm, se=FALSE) +
     scale_colour_brewer("Dataset", palette="Set1") +
     labs(y="Predicted", x="Actual") +
     ggtitle(sprintf("Predicted %s Scores", trait)) +
-    theme(legend.position=c(.85, .10))
-  ggsave(sprintf("%s/plots/scatter-source_%s.png", base_output_path, trait), width=w)
+    theme(legend.position=c(.75, .15))
+  ggsave(sprintf("%s/plots/scatter-source_%s.png", base_output_path, trait), width=w, height=h)
   
   scatter_folds = ggplot(preds, aes(x=actual, y=pred, color=fold, stroke=0)) + 
-    geom_point() +
+    geom_point(size=s) +
     scale_colour_gradient2("Fold") +
     labs(y="Predicted", x="Actual") +
     ggtitle(sprintf("Predicted %s Scores", trait))
-  ggsave(sprintf("%s/plots/scatter-folds_%s.png", base_output_path, trait), width=w)
+  ggsave(sprintf("%s/plots/scatter-folds_%s.png", base_output_path, trait), width=w, height=h)
   
   histo_random = ggplot(preds_random, aes(x=actual)) +
     geom_histogram() +
@@ -45,11 +48,12 @@ for (trait in traits) {
   print(histo_random_pred)
   
   scatter_random = ggplot(preds_random, aes(x=actual, y=pred, stroke=0)) + 
-    geom_point(color="#e41a1c") +
+    geom_point(color="#e41a1c", size=s) +
     geom_smooth(method=lm, se=FALSE, color="#e41a1c") +
     labs(y="Predicted", x="Actual") +
-    ggtitle(sprintf("Predicted %s Scores for 300 Random Faces", trait))
-  ggsave(sprintf("%s/plots/scatter-random_%s.png", base_output_path, trait), width=w)
+    ggtitle(sprintf("Predicted %s Scores for 300 Random Faces", trait)) +
+    theme(plot.title = element_text(size=11))
+  ggsave(sprintf("%s/plots/scatter-random_%s.png", base_output_path, trait), width=w, height=h)
   
   ### CORRELATIONS ###
   library("Metrics")
@@ -75,14 +79,28 @@ df
 ##### 23 Mar 2020 Experiments ####
 
 ## Random Face Error Analysis ##
+labels_unprocessed = read.xlsx(sprintf("%s/random/300_OriginalFaces_Trait&Gender_Data.xlsx", data_path))
 for (trait in traits) {
-  preds_trustworthy = read.csv(sprintf("%s/preds_Trustworthy_random.csv", output_path, trait)) %>%
+  preds_trait = read.csv(sprintf("%s/preds_%s_random.csv", output_path, trait)) %>%
     mutate(preds_bin = pred > 0) %>%
     mutate(actual_bin = actual > 0)
-  cm = confusionMatrix(factor(preds_trustworthy$preds_bin), factor(preds_trustworthy$actual_bin))
+  cm = confusionMatrix(factor(preds_trait$preds_bin), factor(preds_trait$actual_bin))
   fourfoldplot(cm$table, color=c("red", "green"), main=sprintf("Confusion Matrix - %s", trait))
+  
+  histo_random_norm = ggplot(preds_trait, aes(x=actual)) +
+    geom_histogram() +
+    ggtitle(sprintf("%s Scores", trait))
+  print(histo_random_norm)
+  
+  print(trait)
+  print(sd(preds_trait$actual))
+  print(sd(labels_unprocessed[, trait]))
+  
+  histo_random_orig = ggplot(labels_unprocessed, aes_string(x=trait)) +
+    geom_histogram() +
+    ggtitle(sprintf("Original %s Scores", trait))
+  print(histo_random_orig)
 }
-
 
 ## Nationality Bias Experiment ##
 average_faces = read.csv(sprintf("%s/average-faces-preds_all.csv", output_path))
@@ -222,6 +240,7 @@ sorted_pred[,c(
 ### corr between competence and vote_diff?
 plot(joined$Competency.x, joined$vote_diff)
 cor.test(~ Competency.x + vote_diff, joined)
+cor.test(~ pred_Competent.x + vote_diff, joined)
 ### corr between predicted diff in scores and actual diff? no reason there should be
 plot(joined$spread_competency_pred, joined$spread_competency_ground)
 cor.test(~ spread_competency_pred + spread_competency_ground, joined, method="pearson")
