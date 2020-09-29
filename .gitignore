@@ -9,3 +9,5 @@ notebooks/.ipynb_checkpoints
 default.profraw
 data/*/
 models/*.pkl
+.Rproj.user
+*.Rproj
