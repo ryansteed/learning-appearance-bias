@@ -1,4 +1,4 @@
-from regression.api import interpret
+from appearance_bias.api import interpret
 
 # Random Face Validation
 interpret(

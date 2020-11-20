@@ -102,7 +102,7 @@ def interpret(
                 os.path.basename(interpret_dir),
                 "/{}".format(subd) if subd is not None else ""
             )
-            save_path = "{}/{}.png".format(
+            save_path = "{}/{}".format(
                 save_dir,
                 sample['Face name']
             )

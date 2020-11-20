@@ -13,6 +13,8 @@ from keras.preprocessing import image
 from sklearn.model_selection import cross_val_score, KFold
 from sklearn.svm import SVC
 
+import pickle
+
 
 
 class Interpreter:
@@ -44,7 +46,7 @@ class Interpreter:
     # from https://marcotcr.github.io/lime/tutorials/Tutorial%20-%20images.html
     def explain_img(self, img, label, name="", ground_truth=None, save_path=None, verbose=False, **kwargs):
         img_processed = preprocess_input(image.img_to_array(img)).astype(float)
-        sample_embedding = self.extraction_model.model.predict(np.array([img_processed]))
+        # sample_embedding = self.extraction_model.model.predict(np.array([img_processed]))
         pred = self.predict_fn(np.array([img_processed]))
         
         explainer = lime_image.LimeImageExplainer(verbose=False)
@@ -76,7 +78,10 @@ class Interpreter:
         ax[0].imshow(img_processed / 2 + 0.5)
         ax[1].imshow(mark_boundaries(temp / 2 + 0.5, mask))
         if verbose: plt.show()
-        if save_path is not None: plt.savefig(save_path)
+        if save_path is not None: 
+            plt.savefig(f"{save_path}.png")
+            with open(f"{save_path}.pkl", 'wb') as fid:
+                pickle.dump(explanation, fid)
 
         return explanation
 

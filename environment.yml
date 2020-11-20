@@ -25,5 +25,5 @@ dependencies:
     - jupyterlab
     - lime
     - ipywidgets
-    - shap
+    - umap-learn
 
