@@ -25,6 +25,6 @@ setup(
 		'jupyterlab',
 		'lime',
 		'ipywidgets',
-		'shap'
+		'opencv-python'
     ]
 )

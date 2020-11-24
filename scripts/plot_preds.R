@@ -4,6 +4,7 @@ library(caret)
 library(imager)
 library(tidyr)
 library(openxlsx)
+library(ggpubr)
 
 base_output_path = "./output"
 output_path = "./output/preds"
@@ -13,7 +14,7 @@ coefs = c()
 
 h = 4.5
 w = 4.5
-s = 1
+s = 1.15
 
 for (trait in traits) {
   ### LOAD DATA ###
@@ -21,13 +22,15 @@ for (trait in traits) {
   preds_random = read.csv(sprintf("%s/preds_%s_random.csv", output_path, trait))
   
   ### SCATTERS ###
-  scatter_source = ggplot(preds, aes(x=actual, y=pred, color=Source, stroke=0)) + 
+  scatter_source = ggplot(preds, aes(x=actual, y=pred, shape=Source, color=Source, stroke=0)) + 
     geom_point(size=s) +
     geom_smooth(method=lm, se=FALSE) +
+    scale_shape_manual("Dataset", values=c(19,17)) +
     scale_colour_brewer("Dataset", palette="Set1") +
     labs(y="Predicted", x="Actual") +
     ggtitle(sprintf("Predicted %s Scores", trait)) +
-    theme(legend.position=c(.75, .15))
+    theme(legend.position=c(.75, .15)) +
+    stat_cor(method="pearson", show.legend=FALSE)
   ggsave(sprintf("%s/plots/scatter-source_%s.png", base_output_path, trait), width=w, height=h)
   
   scatter_folds = ggplot(preds, aes(x=actual, y=pred, color=fold, stroke=0)) + 
@@ -52,7 +55,8 @@ for (trait in traits) {
     geom_smooth(method=lm, se=FALSE, color="#e41a1c") +
     labs(y="Predicted", x="Actual") +
     ggtitle(sprintf("Predicted %s Scores for 300 Random Faces", trait)) +
-    theme(plot.title = element_text(size=11))
+    theme(plot.title = element_text(size=11)) +
+    stat_cor(method="pearson", show.legend=FALSE)
   ggsave(sprintf("%s/plots/scatter-random_%s.png", base_output_path, trait), width=w, height=h)
   
   ### CORRELATIONS ###
