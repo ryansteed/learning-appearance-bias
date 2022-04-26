@@ -2,6 +2,8 @@
 
 Software package for the paper https://arxiv.org/abs/2002.05636.
 
+NOTE: This software is for scientific replication only and released under a non-commercial license. The models trained here are not fit for use in any application and are only intended for studying whether and to what extent machine learning models embed subjective human prejudices. To prevent malicious use, the training data are available only by request.
+
 ## Installation
 `git clone https://github.com/ryansteed/learning-appearance-bias`
 
