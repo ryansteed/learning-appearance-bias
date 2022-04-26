@@ -2,7 +2,14 @@
 
 Software package for the paper https://arxiv.org/abs/2002.05636.
 
-NOTE: This software is for scientific replication only and released under a non-commercial license. The models trained here are not fit for use in any application and are only intended for studying whether and to what extent machine learning models embed subjective human prejudices. To prevent malicious use, the training data are available only by request.
+NOTE: This software is for scientific replication only and released under a non-commercial license. The models trained here are not fit for use in any application and are *only* intended for studying whether and to what extent traditional machine learning methods embed subjective human prejudices. To prevent unethical misuse, the training data are available only for replication, by request.
+
+## Ethics
+The code in this repository tests whether traditional ML techniques are capable of embedding subjective appearance biases from human annotators. Researchers and companies often utilize computer vision models to predict similarly subjective personality attributes such as “employability" - but we show that traditional ML techniques only embed deliberately manipulated signals of bias, which provide neither an objective measure of personality traits nor a even a good measure of subjective bias itself. The methods we tested lack external validity (correlation with real-world outcomes and other cultural contexts) and internal validity (the ability to even explain annotations of randomly generated faces in a laboratory setting).
+
+Still, recent papers ([Safra et al., 2020](https://www.nature.com/articles/s41467-020-18566-7); [Peterson et al., 2022](https://www.pnas.org/doi/10.1073/pnas.2115228119)) use these and newer ML techniques to make positive claims about predicting human perception biases. By attempting to build better models for predicting perception biases - and making broad claims about the validity of these models - these methods risk enabling applications that literally automate human biases (e.g. for a subjective hiring algorithm, like the ones [recently used by HireVue](https://www.washingtonpost.com/technology/2019/10/22/ai-hiring-face-scanning-algorithm-increasingly-decides-whether-you-deserve-job/)).
+
+The software included here only illustrates the *limitations* of ML in this area (for more, see [this critique of Safra et al.](https://arxiv.org/abs/2202.08674) which cites our work). In response to continued efforts to use ML to automate appearance biases, we make our data available only for replication purposes, on request. The rest of the code is left public under a non-commercial license for the sole purpose of helping readers understand our research.
 
 ## Installation
 `git clone https://github.com/ryansteed/learning-appearance-bias`
@@ -70,7 +77,7 @@ For the 300 Random Faces used in our paper, the `labels.csv` file is provided in
 
 |File|Description|
 |---|---|
-|`data/`| Directory containing provided data for reproducing figures, though data can be stored anywhere.|
+|`data/`| Directory containing provided data for reproducing figures, though data can be stored anywhere. Available on request.|
 |`models/`| contains pre-trained or cached models used/produced during training. Already includes a version of FaceNet pre-trained on MS-Celeb-1M from the [open-source FaceNet release](https://github.com/davidsandberg/facenet), converted for Keras using [keras-facenet](https://github.com/nyoki-mtl/keras-facenet).|
 |`output/`| Automatically generated directory with output plots and features.|
 |`appearance_bias/`| Python module containing source code for `main.py` CLI.|
