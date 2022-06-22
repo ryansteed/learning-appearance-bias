@@ -1,4 +1,4 @@
-# Learning Appearance Bias
+# "Learning" Appearance Bias
 
 Software package for the paper https://arxiv.org/abs/2002.05636.
 
